@@ -34,11 +34,11 @@ _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-extra functionality V0.2_-_-_-_-_-
 [] search popular or other sorting methods
 
 
-# _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-FUTURE-Version-?_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-# create binary to reduce dependencies
-# make it into a Bepinx mod? (might require rewrite into c#)
+_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-FUTURE-Version-?_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
+create binary to reduce dependencies
+make it into a Bepinx mod? (might require rewrite into c#)
 
-# random map challenge functionality (maybe separate mod)
-    # timer
-    # customizable rules
-    # point counter
+random map challenge functionality (maybe separate mod)
+    - timer
+    - customizable rules
+    - point counter
