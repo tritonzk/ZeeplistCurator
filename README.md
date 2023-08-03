@@ -35,11 +35,11 @@
 - ( )   search popular or other sorting methods
 
 
----------------------------------------------FUTURE-Version-?---------------------------------------
-create binary to reduce dependencies
-make it into a Bepinx mod? (might require rewrite into c#)
+--------------------------------------FUTURE-Version-?---------------------------------------
+- create binary to reduce dependencies
+- make it into a Bepinx mod? (might require rewrite into c#)
 
-random map challenge functionality (maybe separate mod)
+- random map challenge functionality (maybe separate mod)
     - timer
     - customizable rules
     - point counter
