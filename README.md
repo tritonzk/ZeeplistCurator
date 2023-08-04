@@ -7,7 +7,7 @@ In an effort to create a game-mode for Zeepkist similar to RMC (random map chall
 
 Download either through console: `git clone https://github.com/tritonzk/ZeepkistRandomizer` or simply clone through the browser. 
 
-Download SteamCMD here https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip and place `steamcmd.exe` in the SteamCMD folder.
+Download SteamCMD here https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip and place `steamcmd.exe` in `Zeepkistrandomizer/SteamCMD`.
 
 Install BeautifulSoup4 through pip 
 `pip install beautifulsoup4`
