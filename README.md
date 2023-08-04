@@ -3,7 +3,7 @@
 In an effort to create a game-mode for Zeepkist similar to RMC (random map challenge) from Trackmania and to make creating playlists less cumbersome, I created this Python script. The script searches the steam workshop using BeautifulSoup4 and downloads workshop items using SteamCMD. For a full list of planned functionality look at the bottom of this page. Not everything functions on Linux for now. I might make a Linux compatible version if there is a want for it.
 
 ## How to install/use
-*this script is created using Python3.11. It should function with any Python3 release*
+*This script is created using Python3.11. It should function with any Python3 release*
 
 Download either through console: `git clone https://github.com/tritonzk/ZeepkistRandomizer` or simply clone through the browser. 
 
