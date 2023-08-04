@@ -1,11 +1,25 @@
+
 # ZeepkistRandomizer
+In an effort to create a game-mode for Zeepkist similar to RMC (random map challenge) from Trackmania and to make creating playlists less cumbersome, I created this Python script. The script searches the steam workshop using BeautifulSoup4 and downloads workshop items using SteamCMD. For a full list of planned functionality look at the bottom of this page. Not everything functions on Linux for now. I might make a Linux compatible version if there is a want for it.
 
-------------------------Base functionality V0.1a-------------------------------------
+## How to install/use
+Download either through console: `git clone https://github.com/tritonzk/ZeepkistRandomizer` or simply clone through the browser. 
 
-***Workshopscraper() -> zeeplist playlist***
+Download SteamCMD here https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip and place `steamcmd.exe` in the SteamCMD folder.
+
+Install BeautifulSoup4 through pip 
+`pip install beautifulsoup4`
+
+Then open the ZeepkistRandomizer folder in your console and run
+`python3 ZeepkistRandomizer.py`  **or**  `python ZeepkistRandomizer.py`
+
+## Planned functionality
+items with (X) are finished
+
+### V.0.1
 
 - (X)   generate random WS page
-- ( )   extract info from page (( ) workshop metadata, (V) workshop ID)
+- (~)   extract info from page ((  ) workshop metadata, (V) workshop ID)
 - (X)   download WS files using SteamCMD and WS id list
 - (X)   extract info from file (_author, authorUID, filename_)      
 - (X)   format and export info into zeepfile/json format
@@ -14,7 +28,8 @@
 - ( )   simple console interface
 - ( )   ignore WS pages that do not have _"1 level"_ in their description
 
--------------------------------extra functionality V0.2-----------------------------------
+### V.0.2
+
 - ( )   download and install SteamCMD automatically or make helper script.
 
 **interface**
@@ -35,11 +50,9 @@
 - ( )   search popular or other sorting methods
 
 
---------------------------------------FUTURE-Version-?---------------------------------------
-- create binary to reduce dependencies
-- make it into a Bepinx mod? (might require rewrite into c#)
-
-- random map challenge functionality (maybe separate mod)
+## Possible future version?
+- create standalone *.exe with interface
+- make a separate Bepinx RMC mod
     - timer
     - customizable rules
     - point counter
