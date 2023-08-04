@@ -1,4 +1,4 @@
-from jsontesting import ZeepfileFormatting
+from Formatting import ZeepfileFormatting
 
 from pathlib import Path
 import subprocess
