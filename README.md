@@ -14,7 +14,7 @@ Then open the ZeepkistRandomizer folder in your console and run
 `python3 ZeepkistRandomizer.py`  **or**  `python ZeepkistRandomizer.py`
 
 ## Planned functionality
-items with (X) are finished and (~) is partially finished.
+items with (X) are finished and (~) are partially finished.
 
 ### V.0.1
 
