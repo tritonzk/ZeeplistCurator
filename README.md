@@ -21,7 +21,7 @@ items with (X) are finished and (~) are partially finished.
 ### V.0.1
 
 - (X)   generate random WS page
-- (~)   extract info from page ((  ) workshop metadata, (V) workshop ID)
+- (~)   extract info from page ((  ) workshop metadata, (X) workshop ID)
 - (X)   download WS files using SteamCMD and WS id list
 - (X)   extract info from file (_author, authorUID, filename_)      
 - (X)   format and export info into zeepfile/json format
