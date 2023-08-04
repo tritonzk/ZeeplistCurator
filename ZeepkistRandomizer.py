@@ -11,6 +11,9 @@ import csv
 
 from bs4 import BeautifulSoup as bs
 
+Workdirectory = os.getcwd()
+zf = ZeepfileFormatting()
+
 # container for Todo's
 def comments():
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-Base functionality V0.1a_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -57,22 +60,8 @@ def comments():
         # point counter
     pass
 
-Workdirectory = r'C:\Users\Thijmen\scripts'
-
-# linux version
-Workdirectory = os.getcwd()
-
-zf = ZeepfileFormatting()
-
-page = 1
-zeepLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=&childpublishedfileid=0&browsesort=mostrecent&section=readytouseitems&requiredtags%5B0%5D=1+Level&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0&actualsort=mostrecent&"
-
-# SOUP init
-# response = requests.get(zeepLink)
-# soup = bs(response.text, "html.parser")
 
 # Input questions
-
 def console_prompt():
     print("----------------------------------------------------------------------------------------------------")
     print("Welcome to ZeepkistScraper. Python script written by Triton")
@@ -117,7 +106,6 @@ def console_prompt():
     roundLength = input("length of round in seconds: ---> ")
     shuffleChoice = input("shuffle? (y/n): ---> ")
     movePlaylist = input("__EXPERIMENTAL__ try copying the playlist file to local appdata zeepkist storage? (y/n): ---> ")
-
 
 console_prompt()
 
@@ -326,63 +314,4 @@ class WorkshopScraper():
             
             print(self.UID_list)
 
-
-
-# with open('C:\\Users\\your_home_folder\\hi.txt') as hello_file:
-# ...     hello_content = hello_file.read()
-
 classy = WorkshopScraper()
-# classy.start(1)
-# classy.start(10)
-# print(classy.workshop_random_link())
-# classy.extract_info_from_steamCMD_downloads()
-# classy.find_max_page()
-# print(classy.workshop_random_link())
-
-# print(classy.soup_finder(zeepLink + "p=1", "a", "pagelink"))
-
-# print(zeepLink + "p=1")
-
-# ctl_downloader(2)
-# multiple_downloader(5)
-# ws_id_from_link()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# workshop_random_link()
-    # return zeepLink, lnumber
-
-# os.chdir(r'steamws')
-# subprocess.run(r'steamctl workshop download {}'.format(2911514873))
-
-
-
-
-
-
-# os.chdir(r'C:\Users\Thijmen\scripts\Steamcmd')
-# subprocess.run(r'steamcmd login anonymous')
-# subprocess.run(r'steamcmd ')
-
-
-# steamctl webapi set-key 6AF761D8AAFC379024BB5DBA0F5070A
-
-
-
-
-
-
