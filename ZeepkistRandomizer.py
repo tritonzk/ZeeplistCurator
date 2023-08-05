@@ -19,7 +19,6 @@ zf = ZeepfileFormatting()
 if "steam.dll" not in os.listdir("SteamCmd/"):
     print('first time install for SteamCMD')
     subprocess.run("SteamCmd/steamcmd.exe")
-    subprocess.run("quit")
 
 # container for Todo's
 def comments():
@@ -27,13 +26,13 @@ def comments():
     # - Workshopscraper (amount, ) -> zeeplist playlist
 
     # [V] generate random WS page
-    # [~] extract info from page ([~] workshop metadata, [V] workshop ID)
+    # [V] extract info from page ([V] workshopID, [V] workshop description)
     # [V] download WS files using SteamCMD and WS id list
-    # [V] extract info from file (author, authorUID, filename)      
+    # [V] extract info from file (author, authorUID, track name)      
     # [V] format and export info into zeepfile/json format
-    # [] download a specific WS ID and add to playlist
-    # [] delete WS files when done
-    # [] simple console interface
+    # [V] download a specific WS ID and add to playlist
+    # [V] delete WS files when done
+    # [V] simple console interface
     # [] ignore WS pages that do not have "1 level" in their description
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-extra functionality V0.2_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
@@ -57,14 +56,22 @@ def comments():
     # [] search popular or other sorting methods
 
 
+    # [] search metadata using WebApi (requires an API key). This allow me to check with more accuracy how many tracks a workshop item has.
+    #           The user has to provide their own API key.
+
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-FUTURE-Version-?_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # create binary to reduce dependencies
+    # create binary to reduce dependencies (use pyinstaller?)
     # make it into a Bepinx mod? (might require rewrite into c#)
 
     # random map challenge functionality (maybe separate mod)
         # timer
         # customizable rules
         # point counter
+
+
+    # ------------------------------------------BUGS/ISSUES-------------------------------------------
+    # how to close out from steamCMD after install?
+
     pass
 
 
@@ -79,6 +86,7 @@ class WorkshopScraper():
         # variables
         self.zeepLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=&childpublishedfileid=0&browsesort=mostrecent&section=readytouseitems&requiredtags%5B0%5D=1+Level&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0&actualsort=mostrecent&"
         self.steamCMDWorkshopLocation = r"/steamcmd/steamapps/workshop/content/1440670/"
+        self.wsLinkTemplate = r"https://steamcommunity.com/sharedfiles/filedetails/?id="
         
         # Zeepfile formatting dicts
         self.ZeeplistFormat = {
@@ -120,7 +128,8 @@ class WorkshopScraper():
 
         print("1: Download randomly")
         print("2: Download specific workshop ID")
-        functionChoice = input("Enter a choice (1,2): ---> ")
+        print("3: create playlist from currently downloaded files")
+        functionChoice = input("Enter a choice (1,2, 3): ---> ")
 
         print("")
 
@@ -128,8 +137,14 @@ class WorkshopScraper():
             idChoice = input("Enter workshop ID: ---> ")
             self.choicesDict["idchoice"] = idChoice
             print("")
+        
+        elif functionChoice == "3":
+            print("")
+            pass
 
-        else:
+
+        elif functionChoice == "1":
+            print("")
 
             # print("Sometimes a workshop item has multiple tracks. How do you want to proceed?\n")
             # print("1: No filter (Purely random, use at your own risk. Sometimes workshop items have 50+ tracks.)")
@@ -147,6 +162,8 @@ class WorkshopScraper():
             # else:
             #     print("not a valid input.")
             #     quit()
+
+            filterChoice = input("use \"1 level\" in description filter? (y/n) ---> ")
 
             workshopAmountChoice = input("How many workshop items to download?: ---> ")
             self.choicesDict["amount"] = workshopAmountChoice
@@ -172,6 +189,7 @@ class WorkshopScraper():
         self.choicesDict["functionChoice"] = functionChoice
         self.choicesDict["shuffle"] = shuffleChoice
         self.choicesDict["delete"] = deleteAfter
+        self.choicesDict["filter"] = filterChoice
       
         print("choices: ", self.choicesDict)
 
@@ -206,6 +224,26 @@ class WorkshopScraper():
      
         return re.compile(r'\d+').search(linklist[rand.randint(0,29)]).group()
 
+    def get_workshop_description(self, workshopId):
+        fullWorkshopLink = self.wsLinkTemplate + workshopId
+        print(fullWorkshopLink)
+        response = requests.get(fullWorkshopLink)
+        soup = bs(response.text, "html.parser")
+        descriptionSearch = soup.find("div", class_="workshopItemDescription")
+        workshopDescription = descriptionSearch.get_text()
+        return workshopDescription
+
+    # might do this dynamically. When a WS item comes up as non default, what to do?
+    def check_default_description():
+        pass
+    
+    # filter for "N levels"
+    def filter_level_amount(self):
+        randomLink = self.workshop_random_link()
+        description = self.get_workshop_description(randomLink)
+        print(re.compile(r'/^(.*?)levels/').search(description))
+        print(description[0])
+        
 
 # --------------------download-------------------------------------------------------------------
 # options: ignore multiple levels (description?), sorting rules (currently only recent)
@@ -249,3 +287,5 @@ class WorkshopScraper():
     
 classy = WorkshopScraper()
 classy.start()
+
+# classy.filter_level_amount()
