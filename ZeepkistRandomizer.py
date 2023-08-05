@@ -117,7 +117,7 @@ class WorkshopScraper():
         self.extract_info_from_steamCMD_downloads()
         zf.zeepfile_Constructor(self.UID_dict, filename = "{}".format(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
 
-        if self.choicesDict["delete"]:
+        if self.choicesDict["delete"] == True:
             shutil.rmtree(Workdirectory + self.steamCMDWorkshopLocation)
 
 
@@ -129,9 +129,9 @@ class WorkshopScraper():
         print("1: Download randomly")
         print("2: Download specific workshop ID")
         print("3: create playlist from currently downloaded files")
-        functionChoice = input("Enter a choice (1,2, 3): ---> ")
+        functionChoice = input("Enter a choice (1,2,3): ---> ")
 
-        print("")
+        
 
         if functionChoice == "2":
             idChoice = input("Enter workshop ID: ---> ")
@@ -164,6 +164,7 @@ class WorkshopScraper():
             #     quit()
 
             filterChoice = input("use \"1 level\" in description filter? (y/n) ---> ")
+            self.choicesDict["filter"] = filterChoice
 
             workshopAmountChoice = input("How many workshop items to download?: ---> ")
             self.choicesDict["amount"] = workshopAmountChoice
@@ -176,10 +177,10 @@ class WorkshopScraper():
         elif shuffleChoice == "n" or "N":
             shuffleChoice = False
         
-        deleteAfter = input("delete workshop files after download? (y/n)")
-        if deleteAfter == "y" or "Y":
+        deleteAfter = input("delete workshop files after download? (y/n): ---> ")
+        if deleteAfter == ("y" or "Y"):
             deleteAfter = True
-        elif deleteAfter == "n" or "N":
+        elif deleteAfter == ("n" or "N"):
             deleteAfter = False
 
         # movePlaylist = input("__EXPERIMENTAL__ try copying the playlist file to local appdata zeepkist storage? (y/n): ---> ")
@@ -189,8 +190,7 @@ class WorkshopScraper():
         self.choicesDict["functionChoice"] = functionChoice
         self.choicesDict["shuffle"] = shuffleChoice
         self.choicesDict["delete"] = deleteAfter
-        self.choicesDict["filter"] = filterChoice
-      
+        
         print("choices: ", self.choicesDict)
 
 
@@ -282,8 +282,8 @@ class WorkshopScraper():
             
 
         #print("file_path", self.zeeplevel_file_path)        
-        print("UID dict ", self.UID_dict)
-        print("items ", items)
+        print("\n___UID dict: ", self.UID_dict)
+        print("___Workshop Id's: ", items, "\n")
     
 classy = WorkshopScraper()
 classy.start()
