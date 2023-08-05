@@ -25,9 +25,9 @@ items with (X) are finished and (~) are partially finished.
 - (X)   download WS files using SteamCMD and WS id list
 - (X)   extract info from file (_author, authorUID, filename_)      
 - (X)   format and export info into zeepfile/json format
-- ( )   download a specific WS ID and add to playlist
-- ( )   delete WS files when done
-- ( )   simple console interface
+- (X)   download a specific WS ID and add to playlist
+- (X)   delete WS files when done
+- (X)   simple console interface
 - ( )   ignore WS pages that do not have _"1 level"_ in their description
 
 ### V.0.2
