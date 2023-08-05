@@ -5,7 +5,7 @@ In an effort to create a game-mode for Zeepkist similar to RMC (random map chall
 ## How to install/use
 *This script is created using Python3.11. It should function with any Python3 release*
 
-Download either through console: `git clone https://github.com/tritonzk/ZeepkistRandomizer` or simply clone through the browser. 
+Download either through console: `git clone https://github.com/tritonzk/ZeepkistRandomizer` or simply download through the browser and unzip. 
 
 Download SteamCMD here https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip and place `steamcmd.exe` in `Zeepkistrandomizer/SteamCMD`.
 
