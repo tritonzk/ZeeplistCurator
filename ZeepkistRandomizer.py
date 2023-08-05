@@ -8,11 +8,18 @@ import re
 import os
 import json
 import csv
+import shutil
 
 from bs4 import BeautifulSoup as bs
 
 Workdirectory = os.getcwd()
 zf = ZeepfileFormatting()
+
+# install Steamcmd if not installed yet
+if "steam.dll" not in os.listdir("SteamCmd/"):
+    print('first time install for SteamCMD')
+    subprocess.run("SteamCmd/steamcmd.exe")
+    subprocess.run("quit")
 
 # container for Todo's
 def comments():
@@ -61,68 +68,18 @@ def comments():
     pass
 
 
-# Input questions
-def console_prompt():
-    print("----------------------------------------------------------------------------------------------------")
-    print("Welcome to ZeepkistScraper. Python script written by Triton")
-    print("This script searches the Steam workshop for random or specific tracks and gives you a Zeepkist playlist in return.\n")
-    
-    print("1: Download randomly")
-    print("2: Download specific workshop ID")
-    functionChoice = input("Enter a choice (1,2): ---> ")
-    
-    print(functionChoice, type(functionChoice))
-
-    if "1" or "2" not in functionChoice:
-        print("invalid input")
-        quit()
-
-    print("")
-
-    if int(functionChoice) == 2:
-        idChoice = input("Enter workshop ID: ---> ")
-        print("")
-    
-    else:
-
-        print("Sometimes a workshop item has multiple tracks. How do you want to proceed?\n")
-        print("1: No filter (Purely random, use at your own risk. Sometimes workshop items have 50+ tracks.)")
-        print("2: No filter. But choose a max number N of tracks per workshop item that are randomly added to the playlist.")
-        print("3: Ignore workshop items that do not state \"1 level\" in their description.")
-        print("4: Ignore workshop items above a certain N \"N level\" in their description.")
-        filterChoice = input("Enter a choice (1,2,3,4): ---> ")
-
-        if filterChoice == "2" or "4":
-            print("")
-            nAmount = input("N?: ---> ")
-        elif filterChoice == "1" or "2" or "3" or "4":
-            print("")
-            workshopAmountChoice = input("How many workshop items to download?: ---> ")
-        else:
-            print("not a valid input.")
-            quit()
-
-    playlistName = input("name of playlist?: ---> ")
-    roundLength = input("length of round in seconds: ---> ")
-    shuffleChoice = input("shuffle? (y/n): ---> ")
-    movePlaylist = input("__EXPERIMENTAL__ try copying the playlist file to local appdata zeepkist storage? (y/n): ---> ")
-
-console_prompt()
-
 class WorkshopScraper():
     def __init__(self):
-        #obsolete?
-        self.zeeplevelIDs = []
-      
         # dicts and lists
+        self.zeeplevelIDs = []
         self.UID_dict = {} 
         self.zeeplevel_file_path = {}
+        self.choicesDict = {}
 
         # variables
         self.zeepLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=&childpublishedfileid=0&browsesort=mostrecent&section=readytouseitems&requiredtags%5B0%5D=1+Level&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0&actualsort=mostrecent&"
         self.steamCMDWorkshopLocation = r"/steamcmd/steamapps/workshop/content/1440670/"
         
-
         # Zeepfile formatting dicts
         self.ZeeplistFormat = {
             "name" : "",
@@ -139,17 +96,85 @@ class WorkshopScraper():
             "Author": ""
         }
 
-    #input function that accepts the info and calls all other functions.
-    def start(self, amount : int):
-        for _ in range(0, amount):
-            self.zeeplevelIDs.append(self.workshop_random_link())
-        
-        self.steamCMD_downloader(self.zeeplevelIDs)
-        self.extract_info_from_steamCMD_downloads()
-        print(self.UID_dict)
+    def start(self):
+        self.console()
+        if int(self.choicesDict["functionChoice"]) == 2:
+            dlSingle = [self.choicesDict['idchoice']]
+            self.steamCMD_downloader(dlSingle)
+        elif int(self.choicesDict["functionChoice"]) == 1:
+            for _ in range(0, int(self.choicesDict["amount"])):
+                self.zeeplevelIDs.append(self.workshop_random_link())
+            self.steamCMD_downloader(self.zeeplevelIDs)
 
-        zf.zeepfile_Constructor(self.UID_dict, filename = "_generatedTest_{}_".format(rand.randint(0,1000)))
+        self.extract_info_from_steamCMD_downloads()
+        zf.zeepfile_Constructor(self.UID_dict, filename = "{}".format(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
+
+        if self.choicesDict["delete"]:
+            shutil.rmtree(Workdirectory + self.steamCMDWorkshopLocation)
+
+
+    def console(self):
+        print("----------------------------------------------------------------------------------------------------")
+        print("Welcome to ZeepkistScraper. Python script written by Triton")
+        print("This script searches the Steam workshop for random or specific tracks and gives you a Zeepkist playlist in return.\n")
+
+        print("1: Download randomly")
+        print("2: Download specific workshop ID")
+        functionChoice = input("Enter a choice (1,2): ---> ")
+
+        print("")
+
+        if functionChoice == "2":
+            idChoice = input("Enter workshop ID: ---> ")
+            self.choicesDict["idchoice"] = idChoice
+            print("")
+
+        else:
+
+            # print("Sometimes a workshop item has multiple tracks. How do you want to proceed?\n")
+            # print("1: No filter (Purely random, use at your own risk. Sometimes workshop items have 50+ tracks.)")
+            # print("2: No filter. But choose a max number N of tracks per workshop item that are randomly added to the playlist.")
+            # print("3: Ignore workshop items that do not state \"1 level\" in their description.")
+            # print("4: Ignore workshop items above a certain N \"N level\" in their description.")
+            # filterChoice = input("Enter a choice (1,2,3,4): ---> ")
+
+            # if filterChoice == "2" or "4":
+            #     print("")
+            #     nAmount = input("N?: ---> ")
+            # elif filterChoice == "1" or "2" or "3" or "4":
+            #     print("")
+            #     workshopAmountChoice = input("How many workshop items to download?: ---> ")
+            # else:
+            #     print("not a valid input.")
+            #     quit()
+
+            workshopAmountChoice = input("How many workshop items to download?: ---> ")
+            self.choicesDict["amount"] = workshopAmountChoice
+
+        playlistName = input("name of playlist?: ---> ")
+        roundLength = input("length of round in seconds: ---> ")
+        shuffleChoice = input("shuffle? (y/n): ---> ")
+        if shuffleChoice == "y" or "Y":
+            shuffleChoice = True
+        elif shuffleChoice == "n" or "N":
+            shuffleChoice = False
         
+        deleteAfter = input("delete workshop files after download? (y/n)")
+        if deleteAfter == "y" or "Y":
+            deleteAfter = True
+        elif deleteAfter == "n" or "N":
+            deleteAfter = False
+
+        # movePlaylist = input("__EXPERIMENTAL__ try copying the playlist file to local appdata zeepkist storage? (y/n): ---> ")
+
+        self.choicesDict["name"] = playlistName
+        self.choicesDict["roundlength"] = roundLength
+        self.choicesDict["functionChoice"] = functionChoice
+        self.choicesDict["shuffle"] = shuffleChoice
+        self.choicesDict["delete"] = deleteAfter
+      
+        print("choices: ", self.choicesDict)
+
 
 # ------------- webscraping and extracting info------------------------------------------------------------------
  
@@ -163,15 +188,10 @@ class WorkshopScraper():
         return maxPage
 
 
-
-
-
 #-------------randomizer elements-------------------------------------------------------------------------------------
 # create a random workshop ID
 # deal with ws items that have multiple tracks
 # choices: include all, choose random(n) per ws item, ignore ws items that don't start with 1,   
-
-# 
 
     # add option to ignore when description doesn't start with 1
     def workshop_random_link(self):   
@@ -180,29 +200,11 @@ class WorkshopScraper():
         response = requests.get(self.zeepLink +  "p={}".format(rPageNumber))
         soup = bs(response.text, "html.parser")
         ItemsOnPage = soup.find_all("a", class_="item_link", href=True)
-        # re.compile(r'\d+').search(linklist[rand.randint(0,29)]).group()
-        # randomItem = ItemsOnPage[rand.randint(0,29)].get("href")
-        # print(randomItem)
-        # soup = bs(requests.get(randomItem).text, "html.parser")
-        # wsDescription = soup.find_all("div", class_="workshopItemDescription")
-
-        # print(wsDescription)
-        # if 
 
         for x in ItemsOnPage:
-        #     soup = bs(x.group().text, "html.parser")
-        #     description = soup.find_all("levels", class_="workshopItemDescription")
-        #     if  description.group()[0] == 1:
             linklist.append(x.get("href"))
-        #     else:
-        #         pass
-
-        # return re.compile(r'\d+').search(linklist[rand.randint(0,29)]).group()
-       
-    
-        
-
-
+     
+        return re.compile(r'\d+').search(linklist[rand.randint(0,29)]).group()
 
 
 # --------------------download-------------------------------------------------------------------
@@ -211,12 +213,12 @@ class WorkshopScraper():
     # download files using a list of workshop Id's
     def steamCMD_downloader(self, IdList):
         os.chdir(Workdirectory + "/steamcmd")
-        steamCMDWorkshopString = ""
+        dlCommand = ""
 
         for x in range(0, len(IdList)):
-            steamCMDWorkshopString += " +workshop_download_item 1440670 {workshopId}".format(workshopId = IdList[x])
+            dlCommand += " +workshop_download_item 1440670 {workshopId}".format(workshopId = IdList[x])
 
-        subprocess.run("steamcmd +login anonymous{} +quit".format(steamCMDWorkshopString))
+        subprocess.run("steamcmd +login anonymous{} +quit".format(dlCommand))
 
     # [V] create dict with workshop Id, author and UID extracted from zeepfiles
     def extract_info_from_steamCMD_downloads(self):    
@@ -241,77 +243,9 @@ class WorkshopScraper():
             self.UID_dict[x].insert(0, self.zeeplevel_file_path[x][:10])
             
 
-                
-        
-        print("file_path", self.zeeplevel_file_path)        
+        #print("file_path", self.zeeplevel_file_path)        
         print("UID dict ", self.UID_dict)
         print("items ", items)
     
-
-    # container for obsolete stuff
-    def old_stuff():
-# -------------------old steamctl code --------------------------------------------OBSOLETE----------------------------------
-
-        # extract ws id from weblink
-        def ws_id_from_link(self):
-            match = re.compile(r'\d+').search(self.workshop_random_link()).group()
-        
-
-        # download multiple tracks from a tracklist
-        # replace this with steamcmd
-        def ctl_downloader(self, amount):
-            trackl = self.multiple_downloader(amount) 
-            print(trackl)
-            os.chdir(r'steamws')
-            for r in range(len(trackl)):
-                subprocess.run(r'steamctl --anonymous workshop download {}'.format(trackl[r]))
-            os.chdir(Workdirectory)
-            
-            # filelist = os.listdir('.')
-            # print (filelist)
-
-        # move to formatting class in different file?--------V---V---V------------------------------------------------------------------
-        # input: Workshop folder
-                                                
-        # get zeepfile location
-        def get_playlist_info(self, cf, zll, lof):
-            os.chdir(Workdirectory + "\steamws" + "\\" + cf)
-            zeepwsfiles = os.listdir('.')
-            zll.append(lof + "\\" + zeepwsfiles[0])
-
-        # filter info from downloaded tracks for creation of playlist
-        def get_track_info(self):
-            os.chdir(Workdirectory + "\steamws")
-            print("cwd: ", os.getcwd())
-            listOfFiles = os.listdir('.')
-            # print(listOfFiles)
-            
-            listOfFolders = []
-
-            for x in range(len(listOfFiles)):
-                if os.path.isdir(Workdirectory + "\steamws" + "\\" + listOfFiles[x]):
-                    current_file = listOfFiles[x]
-                    listOfFolders.append(current_file)
-                    self.get_playlist_info(current_file, self.zeeplevellist, listOfFiles[x])
-                    os.chdir(Workdirectory + "\steamws")
-                else:
-                    os.chdir(Workdirectory + "\steamws")
-            
-            # print(self.zeeplevellist)
-            return self.zeeplevellist
-        
-        def get_player_info(self):
-        
-
-            for x in range(len(self.get_track_info())):
-                # print(Workdirectory + "\steamws" + "\\" + zeeplevellist[x])
-                with open(Workdirectory + "\steamws" + "\\" + self.zeeplevellist[x]) as csvfile:
-                    spamreader = csv.reader(csvfile, delimiter=',')
-                    # print(next(spamreader))
-                    self.UID_dict["UID_{}".format(x)] = next(spamreader)
-
-                self.UID_list.append((self.UID_dict.get("UID_{}".format(x))[2]))
-            
-            print(self.UID_list)
-
 classy = WorkshopScraper()
+classy.start()
