@@ -74,8 +74,7 @@ def comments():
 
     # ------------------------------------------BUGS/ISSUES-------------------------------------------
     # how to close out from steamCMD after install?
-    # extract_info_from_steamCMD is broken. find better way to format, store and iterate over filepaths.
-
+    
     pass
 
 
@@ -272,19 +271,12 @@ class WorkshopScraper():
         
         wsMetadata = subprocess.run(r'steamctl --anonymous workshop info {}'.format(workshopId))
 
-        # https://api.steampowered.com/IPublishedFileService#RankedByPublicationDate/QueryFiles/v1/?key=6AF761D8AAFC379024BB5DBA0F5070A8&appid=1440670&page=50%numberpage=3%return_tags=true
-        # count=3
-        
-        
-        
         # query_type=k_PublishedFileQueryType_RankedByPublicationDate
         # numberpage=
         # page=50
         # https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=440&count=3
 
         # search_text	string	✔	Text to match in the item's title or description
-
-
 
         print(wsMetadata)
 
@@ -351,19 +343,3 @@ class WorkshopScraper():
     
 classy = WorkshopScraper()
 classy.start()
-
-# print(classy.steamCMDWorkshopLocation)
-
-# classy.extract_info_from_steamCMD_downloads()
-# classy.ws_id_from_browsing(classy.search_ws(/\"flore#"))
-
-# classy.web_api_metadata("2804222316")
-
-
-# test = 'C:\\Users\\Thijmen\\Documents\\GitHub\\ZeepkistRandomizer\\SteamCmd\\steamapps\\workshop\\content\\1440670\\2981839136\\flore#10\\flore#10 .zeeplevel'
-
-# splitTest = test.split('1440670')
-# print(splitTest[1][1:11])
-
-
-# classy.filter_level_amount()
