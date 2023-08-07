@@ -6,13 +6,7 @@ In an effort to create a game-mode for Zeepkist similar to RMC (random map chall
 *This script is created using Python3.11. It should function with any Python3 release*
 [download steamcmd.exe](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip)
 
-You can now download the *.exe release. Download, unzip and place `steamcmd.exe` in the `/SteamCmd` folder.
-
-Install BeautifulSoup4 through pip 
-`pip install beautifulsoup4`
-
-Then open the ZeepkistRandomizer folder in your console and run
-`python3 ZeepkistRandomizer.py`  **or**  `python ZeepkistRandomizer.py`
+(update) You can now download the *.exe release. Download, unzip and place `steamcmd.exe` in the `/SteamCmd` folder.
 
 ## Planned functionality
 items with (X) are finished and (~) are partially finished.
