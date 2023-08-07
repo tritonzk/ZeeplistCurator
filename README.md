@@ -4,9 +4,8 @@ In an effort to create a game-mode for Zeepkist similar to RMC (random map chall
 
 ## How to install/use
 *This script is created using Python3.11. It should function with any Python3 release*
-[download steamcmd.exe](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip)
 
-(update) You can now download the *.exe release. Download, unzip and place `steamcmd.exe` in the `/SteamCmd` folder.
+(update) You can now download the *.exe release. Download, unzip and place [`steamcmd.exe`](https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip) in the `/SteamCmd` folder.
 
 ## Planned functionality
 items with (X) are finished and (~) are partially finished.
