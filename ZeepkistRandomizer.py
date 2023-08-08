@@ -17,10 +17,16 @@ from bs4 import BeautifulSoup as bs
 Workdirectory = os.getcwd()
 zf = ZeepfileFormatting()
 
+# create SteamCmd folder if none is found
+if "SteamCmd" not in os.listdir(Workdirectory):
+    print("creating SteamCmd folder")
+    os.mkdir("SteamCmd")
+
 # install Steamcmd if not installed yet
 if "steam.dll" not in os.listdir("SteamCmd/"):
     print('first time install for SteamCMD')
     subprocess.run("SteamCmd/steamcmd.exe")
+
 
 # container for Todo's
 def comments():
@@ -39,6 +45,7 @@ def comments():
 
     # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-extra functionality V0.2_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
     # [] download and install SteamCMD automatically or make helper script.
+    # [] download collections
 
     # ------interface
     # [] better console interface (use simple term menu?)
@@ -58,6 +65,9 @@ def comments():
     # [] search a specific range of pages
     # [] search popular or other sorting methods
 
+    # --------playlist manipulation
+    # [] create playlist from currently downloaded files in your steam folder.
+
 
     # [] search metadata using WebApi (requires an API key). This allow me to check with more accuracy how many tracks a workshop item has.
     #           The user has to provide their own API key.
@@ -74,6 +84,7 @@ def comments():
 
     # ------------------------------------------BUGS/ISSUES-------------------------------------------
     # how to close out from steamCMD after install?
+    # 
     
     pass
 
@@ -110,8 +121,10 @@ class WorkshopScraper():
             "Author": ""
         }
 
+    # start function
     def start(self):
         self.console()
+
         if int(self.choicesDict["functionChoice"]) == 2:
             dlSingle = [self.choicesDict['idchoice']]
             self.steamCMD_downloader(dlSingle)
@@ -128,10 +141,10 @@ class WorkshopScraper():
         if self.choicesDict["delete"] == True:
             shutil.rmtree(Workdirectory + self.steamCMDWorkshopLocation)
 
-
+    # terminal interface
     def console(self):
         print("----------------------------------------------------------------------------------------------------")
-        print("Welcome to ZeepkistScraper. Python script written by Triton")
+        print("Welcome to ZeepkistRandomizer. Python script written by Triton")
         print("This script searches the Steam workshop for random or specific tracks and gives you a Zeepkist playlist in return.\n")
 
         print("1: Download randomly")
@@ -201,9 +214,12 @@ class WorkshopScraper():
         print("choices: ", self.choicesDict)
 
 
+
 # ------------- webscraping and extracting info------------------------------------------------------------------
 
-    # what number is the last workshop page? -> int
+
+
+    # [V] what number is the last workshop page? -> int
     def find_max_page(self, wsLink):
         soup = bs(requests.get(wsLink).text, "html.parser")
         pageNumberLinks = soup.find_all("a", class_="pagelink")
@@ -212,9 +228,11 @@ class WorkshopScraper():
         maxPage = int(match.group()[1:])
         return maxPage
     
+    # [V]
     def extract_id_from_wslink(self, wsLink):
         return re.compile(r'\d+').search(wsLink).group()
-
+    
+    # [V]
     def get_workshop_description(self, workshopId):
         fullWorkshopLink = self.wsLinkTemplate + workshopId
         print(fullWorkshopLink)
@@ -223,15 +241,13 @@ class WorkshopScraper():
         descriptionSearch = soup.find("div", class_="workshopItemDescription")
         workshopDescription = descriptionSearch.get_text()
         return workshopDescription
-
-
-#-------------randomizer and filter elements-------------------------------------------------------------------------------------
     
+    # [V]
     def random_page(self):
         return self.zeepLink + "p={}".format(rand.randint(0, self.find_max_page(self.zeepLink + "p=1")))
 
-
-    def ws_id_from_browsing(self, browsingLink):
+    # [V] Download all items from a browser URL
+    def ws_id_from_browsing(self, browsingLink): 
         # check for multiple pages
         # extract links from page
         linklist = []
@@ -243,30 +259,25 @@ class WorkshopScraper():
             #extract all links
         for y in linklist:
             idlist.append(self.extract_id_from_wslink(y))
-
         return idlist
 
-
-    # return random WS id
+    # [V] return random WS id
     def workshop_random_link(self):   
         linklist = []
         rPageNumber = rand.randint(0, self.find_max_page(self.zeepLink + "p=1"))
         response = requests.get(self.zeepLink +  "p={}".format(rPageNumber))
         soup = bs(response.text, "html.parser")
         ItemsOnPage = soup.find_all("a", class_="item_link", href=True)
-
         for x in ItemsOnPage:
             linklist.append(x.get("href"))
-     
         return self.extract_id_from_wslink(linklist[rand.randint(0,29)])
 
-
-    # might do this dynamically. When a WS item comes up as non default, what to do?
+    # [X] might do this dynamically. When a WS item comes up as non default, what to do?
     def check_default_description():
         pass
     
-    # try to get the amount of levels from WS items through WebApi. 
     # Maybe steamctl is not necessary for this? Find alternative.
+    # [~] try to get the amount of levels from WS items through WebApi. 
     def web_api_metadata(self, workshopId):
         
         wsMetadata = subprocess.run(r'steamctl --anonymous workshop info {}'.format(workshopId))
@@ -280,30 +291,24 @@ class WorkshopScraper():
 
         print(wsMetadata)
 
-    # create a link from a searchterm
+    # [V] create a link from a searchterm
     def search_ws(self, searchTerm):
         searchLink = self.searchWsLink.format(urllib.parse.quote(searchTerm))
         return searchLink
 
-    # filter for "N levels"
+    # [~] filter for "N levels"
     def filter_level_amount(self):
         randomLink = self.workshop_random_link()
         description = self.get_workshop_description(randomLink)
         print(re.compile(r'/^(.*?)levels/').search(description))
         print(description[0])
         
-
-# --------------------download-------------------------------------------------------------------
-# options: ignore multiple levels (description?), sorting rules (currently only recent)
-
-    # download files using a list of workshop Id's
+    # [V] download files using a list of workshop Id's
     def steamCMD_downloader(self, IdList):
         os.chdir(Workdirectory + "/steamcmd")
         dlCommand = ""
-
         for x in range(0, len(IdList)):
             dlCommand += " +workshop_download_item 1440670 {workshopId}".format(workshopId = IdList[x])
-
         subprocess.run("steamcmd +login anonymous{} +quit".format(dlCommand))
 
     # [V] create dict with workshop Id, author and UID extracted from zeepfiles
@@ -311,20 +316,27 @@ class WorkshopScraper():
         os.chdir(self.steamCMDWorkshopLocation)
         # print(self.steamCMDWorkshopLocation)
         items = os.listdir(".")
+        print("items ", items)
+        files = folders = 0
+       
+        # count amount of folders
+        for _, dirnames, filenames in os.walk("."):
+            files += len(filenames)
+            folders += len(dirnames)
+        amountOfTracks = folders - len(items)
+        print("amount of tracks: ", amountOfTracks)
 
-        #change dir to ws folder
-        for x in range(0, len(items)):
-            os.chdir(self.steamCMDWorkshopLocation + items[x])
-
-        #   
-            for y in os.listdir("."):
-                if os.path.isdir(y):
-                    os.chdir(self.steamCMDWorkshopLocation + items[x] + "\\" + y)
+        for x in items:
+            os.chdir(self.steamCMDWorkshopLocation + x)
+            tracks = os.listdir(".")
+            print("tracks ", tracks)
+            for y in tracks:
+                print("track", y)
+                if os.path.isdir(self.steamCMDWorkshopLocation + x + "\\" + y):
+                    os.chdir(self.steamCMDWorkshopLocation + x + "\\" + y) 
                     for z in os.listdir("."):
-                        
                         if z[-10:] == ".zeeplevel":
-                            # print(z)
-                            self.zeeplevel_file_path[y] = self.steamCMDWorkshopLocation + items[x] + "\\" + y + "\\" + z
+                            self.zeeplevel_file_path[y] = self.steamCMDWorkshopLocation + x + "\\" + y + "\\" + z
 
         # extract UID and Author from zeepfiles to UID_dict
         for x in self.zeeplevel_file_path.keys():
@@ -335,7 +347,9 @@ class WorkshopScraper():
             self.UID_dict[x] = zeepUserData
             splitPath = self.zeeplevel_file_path[x].split('1440670')
             self.UID_dict[x].insert(0, splitPath[1][1:11])
-            
+        
+
+        
 
         print("\nfile_path", self.zeeplevel_file_path)        
         print("\n___UID dict: ", self.UID_dict)
