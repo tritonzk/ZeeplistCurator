@@ -139,7 +139,7 @@ class WorkshopScraper():
         zf.zeepfile_Constructor(self.UID_dict, filename = "{}".format(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
 
         if self.choicesDict["delete"] == True:
-            shutil.rmtree(Workdirectory + self.steamCMDWorkshopLocation)
+            shutil.rmtree(self.steamCMDWorkshopLocation)
 
     # terminal interface
     def console(self):
