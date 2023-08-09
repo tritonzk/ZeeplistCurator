@@ -1,9 +1,9 @@
+.gitignore
 SteamCmd/*
 !SteamCmd/place_steamcmd_here.txt
-
 __pycache__
 old_script
-
 _*
-
 *.zeeplist
+
+gui.py
