@@ -10,12 +10,15 @@ import json
 import csv
 import shutil
 import urllib.parse
+import zipfile
 
 
 from bs4 import BeautifulSoup as bs
 
 Workdirectory = os.getcwd()
 zf = ZeepfileFormatting()
+
+SteamCmdLink = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
 
 # create SteamCmd folder if none is found
 if "SteamCmd" not in os.listdir(Workdirectory):
@@ -25,82 +28,40 @@ if "SteamCmd" not in os.listdir(Workdirectory):
 # install Steamcmd if not installed yet
 if "steam.dll" not in os.listdir("SteamCmd/"):
     print('first time install for SteamCMD')
+    os.chdir(Workdirectory + "SteamCmd")
+    response = requests.get(SteamCmdLink)
+    file = open("SteamCmd.zip", "wb")
+    file.write(response.content)
+    file.close()
+    with zipfile.ZipFile(Workdirectory + "\\tmp\\SteamCmd.zip", 'r') as zip_ref:
+        zip_ref.extractall(Workdirectory + "\\tmp")
+    os.remove(Workdirectory + "\\tmp\\SteamCmd.zip")
     subprocess.run("SteamCmd/steamcmd.exe")
 
 
 # container for Todo's
 def comments():
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-Base functionality V0.1a_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # - Workshopscraper (amount, ) -> zeeplist playlist
+    # ------------------------------------------BUGS/ISSUES/TO-DO---------------------------------------------------------------
+    # [9] download multiple pages from a steamuser workshop page.
 
-    # [V] generate random WS page
-    # [V] extract info from page ([V] workshopID, [V] workshop description)
-    # [V] download WS files using SteamCMD and WS id list
-    # [V] extract info from file (author, authorUID, track name)      
-    # [V] format and export info into zeepfile/json format
-    # [V] download a specific WS ID and add to playlist
-    # [V] delete WS files when done
-    # [V] simple console interface
-    # [] ignore WS pages that do not have "1 level" in their description
-
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-extra functionality V0.2_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # [] download and install SteamCMD automatically or make helper script.
-    # [] download collections
-
-    # ------interface
-    # [] better console interface (use simple term menu?)
-
-    # -------move files to correct place
-    # [] move the playlist file to local storage
-    # [] move downloaded WS files to steam folder?
-
-    # -------filters
-    # [] ignore WS pages above a certain "N level" in their description
-    # [] add a random amount from each downloaded WS item to the playlist
-    # [] add all WS items downloaded via steamCMD into playlists (option to limit amount per playlist)
-
-    # -------alternate ways to search
-    # [V] download first 30 relevant from search term
-    # [] crawl until finding a WS item that contains more than N items --> add to a playlist
-    # [] search a specific range of pages
-    # [] search popular or other sorting methods
-
-    # --------playlist manipulation
-    # [] create playlist from currently downloaded files in your steam folder.
-
-
-    # [] search metadata using WebApi (requires an API key). This allow me to check with more accuracy how many tracks a workshop item has.
-    #           The user has to provide their own API key.
-
-    # _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-FUTURE-Version-?_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
-    # create binary to reduce dependencies (use pyinstaller?)
-    # make it into a Bepinx mod? (might require rewrite into c#)
-
-    # random map challenge functionality (maybe separate mod)
-        # timer
-        # customizable rules
-        # point counter
-
-
-    # ------------------------------------------BUGS/ISSUES-------------------------------------------
-    # how to close out from steamCMD after install?
-    # 
-    
+    # [1] how to close out from steamCMD after install?
+    # [1] the download command can be too long. After a certain amount the command stops working. might be another issue? requires more testing
     pass
 
 
 class WorkshopScraper():
     def __init__(self):
         # dicts and lists
-        self.zeeplevelIDs = []
-        self.UID_dict = {} 
-        self.zeeplevel_file_path = {}
-        self.choicesDict = {}
+        self.zeeplevelIDs = [] # list of all workshop ids
+        self.UID_dict = {} # info for playlist
+        self.zeeplevel_file_path = {} # file path by track name
+        self.choicesDict = {} #choices from console
 
         # variables
         self.zeepLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=&childpublishedfileid=0&browsesort=mostrecent&section=readytouseitems&requiredtags%5B0%5D=1+Level&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0&actualsort=mostrecent&"
         self.wsLinkTemplate = r"https://steamcommunity.com/sharedfiles/filedetails/?id="
-        self.searchWsLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&childpublishedfileid=0&browsesort=textsearch&section=readytouseitems&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0"
+        self.searchWsLink = r"https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
+        self.steamuserWorkshop = r"https://steamcommunity.com/id/{user}/myworkshopfiles/?appid=1440670&p={page}&numperpage=30".format(user = "", page = 1)
         
         self.steamCMDWorkshopLocation = Workdirectory + "\\SteamCmd\\steamapps\\workshop\\content\\1440670\\"
 
@@ -134,6 +95,12 @@ class WorkshopScraper():
             self.steamCMD_downloader(self.zeeplevelIDs)
         elif int(self.choicesDict["functionChoice"]) == 4:
             self.steamCMD_downloader(self.ws_id_from_browsing(self.search_ws(self.choicesDict["searchTerm"])))
+        elif int(self.choicesDict["functionChoice"]) == 5:
+            if int(self.choicesDict["steamUserPage"]) == 1:
+                self.steamCMD_downloader(self.get_user_tracks(self.choicesDict["steamUser"], 1))
+            else:    
+                for x in range(1, int(self.choicesDict["steamUserPage"])):
+                    self.steamCMD_downloader(self.get_user_tracks(self.choicesDict["steamUser"], x))
 
         self.extract_info_from_steamCMD_downloads()
         zf.zeepfile_Constructor(self.UID_dict, filename = "{}".format(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
@@ -151,29 +118,35 @@ class WorkshopScraper():
         print("2: Download specific workshop ID")
         print("3: create playlist from currently downloaded files")
         print("4: create playlist from first 30 searchresults")
-        functionChoice = input("Enter a choice (1,2,3,4): ---> ")
+        print("5: create playlist from first 30 from steamuser")
+        functionChoice = input("Enter a choice (1,2,3,4,5): ---> ")
 
         
 
         if functionChoice == "2":
-            idChoice = input("Enter workshop ID: ---> ")
-            self.choicesDict["idchoice"] = idChoice
             print("")
+            self.choicesDict["idchoice"] = input("Enter workshop ID: ---> ")
+            
 
         elif functionChoice == "4":
-            print("")
-            searchTerm = input("enter search term: ---> ")
-            self.choicesDict["searchTerm"] = searchTerm
+            print("") 
+            self.choicesDict["searchTerm"] = input("enter search term: ---> ")
         
         elif functionChoice == "3":
             print("")
             pass
 
+        elif functionChoice == "5":
+            print("for the steamuserID go to a steamuser workshop page and copy \n https://steamcommunity.com/profiles/___SteamUserId___/myworkshopfiles/")
+            self.choicesDict["steamUser"] = input("enter SteamUserId: ---> ")
+            maxpage = self.find_max_page(self.steamuserWorkshop.format(user = self.choicesDict["steamUser"], page = 1))
+            print("Steampage has {} ".format(maxpage) + "pages. How many do you want to download?")
+            self.choicesDict["steamUserPage"] = input("enter amount of pages: ---> ")
 
         elif functionChoice == "1":
             print("")
 
-            # print("Sometimes a workshop item has multiple tracks. How do you want to proceed?\n")
+            # print("Somet imes a workshop item has multiple tracks. How do you want to proceed?\n")
             # print("1: No filter (Purely random, use at your own risk. Sometimes workshop items have 50+ tracks.)")
             # print("2: No filter. But choose a max number N of tracks per workshop item that are randomly added to the playlist.")
             # print("3: Ignore workshop items that do not state \"1 level\" in their description.")
@@ -214,9 +187,7 @@ class WorkshopScraper():
         print("choices: ", self.choicesDict)
 
 
-
 # ------------- webscraping and extracting info------------------------------------------------------------------
-
 
 
     # [V] what number is the last workshop page? -> int
@@ -276,18 +247,11 @@ class WorkshopScraper():
     def check_default_description():
         pass
     
-    # Maybe steamctl is not necessary for this? Find alternative.
+    # Maybe steamctl is not necessary for this? Find alternative. 
     # [~] try to get the amount of levels from WS items through WebApi. 
     def web_api_metadata(self, workshopId):
         
         wsMetadata = subprocess.run(r'steamctl --anonymous workshop info {}'.format(workshopId))
-
-        # query_type=k_PublishedFileQueryType_RankedByPublicationDate
-        # numberpage=
-        # page=50
-        # https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=440&count=3
-
-        # search_text	string	✔	Text to match in the item's title or description
 
         print(wsMetadata)
 
@@ -302,7 +266,8 @@ class WorkshopScraper():
         description = self.get_workshop_description(randomLink)
         print(re.compile(r'/^(.*?)levels/').search(description))
         print(description[0])
-        
+    
+    # Downloads stop working for an N? amount, split op the command to fix?
     # [V] download files using a list of workshop Id's
     def steamCMD_downloader(self, IdList):
         os.chdir(Workdirectory + "/steamcmd")
@@ -311,8 +276,19 @@ class WorkshopScraper():
             dlCommand += " +workshop_download_item 1440670 {workshopId}".format(workshopId = IdList[x])
         subprocess.run("steamcmd +login anonymous{} +quit".format(dlCommand))
 
+    def get_user_tracks(self, user, page):
+       
+        tracklist = []
+        soup = bs(requests.get(self.steamuserWorkshop.format(user = user, page = page)).text, "html.parser")
+        tracks = soup.find_all("a", class_="ugc", href=True)
+        # print(tracks)
+        for x in tracks:
+            tracklist.append(x.get("data-publishedfileid"))
+        return tracklist
+
     # [V] create dict with workshop Id, author and UID extracted from zeepfiles
     def extract_info_from_steamCMD_downloads(self):    
+
         os.chdir(self.steamCMDWorkshopLocation)
         # print(self.steamCMDWorkshopLocation)
         items = os.listdir(".")
@@ -357,3 +333,4 @@ class WorkshopScraper():
     
 classy = WorkshopScraper()
 classy.start()
+
