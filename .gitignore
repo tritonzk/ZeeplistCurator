@@ -6,3 +6,7 @@ old_script
 _*
 *.zeeplist
 gui.py
+tmp
+tmp/*
+README.md
+zworpshoptest.py
