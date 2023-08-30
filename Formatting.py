@@ -1,11 +1,6 @@
 import json
 import os
 
-# ------- planned functionality---------------------------------------------------------
-
-# imported by zeepkistrandomizer
-# creates a playlist from a folder with ws-files
-
 workDirectory = os.getcwd()
 
 zeeplistFormat = {"name" : "",
@@ -19,7 +14,6 @@ trackFormat = {"UID": "",
         "Name": "",
         "Author": ""}
 
-
 class ZeepfileFormatting():
     def __init__(self):
         self.zeepDict = {}
@@ -28,12 +22,15 @@ class ZeepfileFormatting():
 
         for x in UIDDict.items():
             self.zeepDict = zeeplistFormat
-            trackFormat = {"UID" : str(x[1][2]), "WorkshopID" : int(x[1][0]), "Name" : "{}".format(x[0]), "Author" : "{}".format(x[1][1])}
+            trackFormat = {"UID" : str(x[0]), 
+                           "WorkshopID" : int(x[1][2]), 
+                           "Name" : str(x[1][0]), 
+                           "Author" : str(x[1][1])}
             levelList = self.zeepDict["levels"]
             levelList.append(trackFormat)
             self.zeepDict["levels"] = levelList
             self.zeepDict["name"] = filename
-            
+
         self.zeepDict["amountOfLevels"] = len(UIDDict)
         self.zeepDict["roundLength"] = roundlength
         self.zeepDict["shufflePlaylist"] = shuffle
@@ -42,5 +39,3 @@ class ZeepfileFormatting():
         playlistFile = open(filename + ".zeeplist", "w")
         json.dump(self.zeepDict, playlistFile, indent =  2)
         playlistFile.close()
-
-    
