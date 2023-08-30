@@ -5,8 +5,10 @@ class Console():
     def console(self):
             print("----------------------------------------------------------------------------------------------------")
             print("Welcome to ZeepkistRandomizer. Python script written by Triton")
-            print("This script searches the Steam workshop for random or specific tracks and gives you a Zeepkist playlist in return.\n")
-
+            print(r"place this program in your playlist folder at: %Appdata%\Zeepkist\Playlists")
+            print("This script searches the Steam workshop using Thundernerds 'Zworpshop API' for random or specific tracks and gives you a Zeepkist playlist in return.")
+            print("You can also search the workshop and get the first 30 results as a playlist\n")
+            
             print("1: Download randomly")
             print("2: Download specific workshop ID")
             print("3: create playlist from steamuser")
@@ -26,13 +28,13 @@ class Console():
                 print("")
                 print("do you want to search using:")
                 print("1: AuthorId (id in the zeepfile)")
-                print("2: Steam User Id (from the steam workshop page)")
+                print("2: extract Authorid from a workshop item")
                 self.choicesDict["userFromWorkshop"] = input("Enter a choice (1,2): ---> ")
                 if int(self.choicesDict["userFromWorkshop"]) == 1:
                     self.choicesDict["authorId"] = input("enter AuthorId: ---> ")
                 elif int(self.choicesDict["userFromWorkshop"]) == 2:
-                    print("copy a workshopId from the user you want to download from here: \n https://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___")
-                    self.choicesDict["steamUserId"] = input("enter workshopId: ---> ")
+                    print("\ncopy a workshop Id for a track from the user you want to download from here: \nhttps://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___")
+                    self.choicesDict["steamUserId"] = input("\nenter workshopId: ---> ")
 
             elif functionChoice == "4":
                 print("")

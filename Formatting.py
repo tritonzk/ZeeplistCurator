@@ -1,11 +1,6 @@
 import json
 import os
 
-# ------- planned functionality---------------------------------------------------------
-
-# imported by zeepkistrandomizer
-# creates a playlist from a folder with ws-files
-
 workDirectory = os.getcwd()
 
 zeeplistFormat = {"name" : "",
@@ -18,7 +13,6 @@ trackFormat = {"UID": "",
         "WorkshopID": 0,
         "Name": "",
         "Author": ""}
-
 
 class ZeepfileFormatting():
     def __init__(self):
@@ -45,5 +39,3 @@ class ZeepfileFormatting():
         playlistFile = open(filename + ".zeeplist", "w")
         json.dump(self.zeepDict, playlistFile, indent =  2)
         playlistFile.close()
-
-    

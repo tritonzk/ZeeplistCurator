@@ -1,11 +1,11 @@
 import json
 import os
-import urllib.parse
 import re
+import urllib.parse
 
 import requests
-
 from bs4 import BeautifulSoup as bs
+
 from Console import Console
 from Formatting import ZeepfileFormatting as zf
 
@@ -13,8 +13,7 @@ Workdirectory = os.getcwd()
 
 class WorkshopScraper():
     def __init__(self):
-        # dicts and lists
-        self.choicesDict = {} #choices from console
+        self.choicesDict = {} # choices from console
         self.tracklist = {}
 
         self.zworpshopGraphHql = "https://graphql.zworpshop.com/"
@@ -27,10 +26,8 @@ class WorkshopScraper():
         self.searchWsPopular = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=trend&section=&actualsort=trend&p=1&days=-1"
 
 
-    # start function
     def start(self):
         self.choicesDict = Console.console(self)
-
         if int(self.choicesDict["functionChoice"]) == 1:
             self.info_from_random(int(self.choicesDict["amount"]))
         elif int(self.choicesDict["functionChoice"]) == 2:
@@ -51,12 +48,15 @@ class WorkshopScraper():
             print(self.tracklist[x])
 
         zf.zeepfile_Constructor(self, UIDDict = self.tracklist, filename = str(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
+        input("\nDone! Press Enter to exit")
+
+# ----------- Helper functions ---------------------
 
     def sort_to_tracklist(self, item):
         for x in item:
             self.tracklist[x["fileUid"]] = [x["name"], x["fileAuthor"], x["workshopId"]]
 
-# ------------- Zworpshop callouts ------------------------------------------------------------------
+# ------------- Zworpshop callouts -------------------
 
     def info_from_random(self, amount):
         randomtracks = requests.get(self.randomlink.format(str(amount)))
@@ -77,6 +77,9 @@ class WorkshopScraper():
         if "steamUserId" in self.choicesDict:
             userid = requests.get(self.workshoplink.format(str(user)))
             workshopfile = json.loads(userid.content)
+            if "message" in workshopfile[0]:
+                print("no such user")
+                quit()
             user = workshopfile[0]["authorId"]
             
         usertracks = requests.get(self.userlink.format(str(user)))
@@ -91,7 +94,6 @@ class WorkshopScraper():
 
         self.sort_to_tracklist(jsonfile)
 
-    
 # --------------- Searching -----------------------
 
     def search_ws(self, searchTerm, sorting):
@@ -117,13 +119,6 @@ class WorkshopScraper():
             idlist.append(re.compile(r'\d+').search(y).group())
         return idlist
 
-    def searchTesting(self, search, sorting):
-        print(self.info_from_multiple_worshopid(self.ws_id_from_browsing(self.search_ws(search, sorting))))
-
-
+        
 classy = WorkshopScraper()
 classy.start()
-
-# classy.searchTesting("flore", 2)
-# classy.info_from_user("3021729374", 2)
-# print(classy.tracklist)
