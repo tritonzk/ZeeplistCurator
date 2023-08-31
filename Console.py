@@ -6,7 +6,7 @@ class Console():
             print("----------------------------------------------------------------------------------------------------")
             print("Welcome to ZeepkistRandomizer. Python script written by Triton")
             print(r"place this program in your playlist folder at: %Appdata%\Zeepkist\Playlists")
-            print("This script searches the Steam workshop using Thundernerds 'Zworpshop API' for random or specific tracks and gives you a Zeepkist playlist in return.")
+            print("This script searches for tracks using Thundernerds 'Zworpshop API' and creates a playlist in return.")
             print("You can also search the workshop and get the first 30 results as a playlist\n")
             
             print("1: Download randomly")
