@@ -1,3 +1,5 @@
+import os
+
 class Console():
     def __init__(self) -> None:
         self.choicesDict = {}
@@ -13,7 +15,8 @@ class Console():
             print("2: Download specific workshop ID")
             print("3: create playlist from steamuser")
             print("4: download 30 from searchterm")
-            functionChoice = input("Enter a choice (1,2,3,4): ---> ")
+            print("5: make playlists for favorite creators")
+            functionChoice = input("Enter a choice (1,2,3,4,5): ---> ")
 
             if functionChoice == "1":
                 print("")
@@ -44,6 +47,11 @@ class Console():
                 print("3: Popular (all Time)")
                 self.choicesDict["sorting"] = input("Enter a choice (1,2,3): --->")
                 self.choicesDict["searchTerm"] = input("enter search term: ---> ")
+
+            elif functionChoice == "5":
+                print("")
+                print("create ZeepCreatorlist.json in current folder. See my tutorial here: TMP\n to learn how to setup this file.")
+                
             
             playlistName = input("name of playlist?: ---> ")
             roundLength = input("length of round in seconds: ---> ")

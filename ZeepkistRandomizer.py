@@ -39,6 +39,8 @@ class WorkshopScraper():
                 self.info_from_user(str(self.choicesDict["authorId"]))
         elif int(self.choicesDict["functionChoice"]) == 4:
             self.info_from_multiple_worshopid(self.ws_id_from_browsing(self.search_ws(self.choicesDict["searchTerm"], self.choicesDict["sorting"])))
+        elif int(self.choicesDict["functionChoice"]) == 5:
+            self.bulk_download_favorite_creators()
 
         if len(self.tracklist) == 0:
             print("\nTrack list is empty. Try again")
@@ -94,6 +96,29 @@ class WorkshopScraper():
 
         self.sort_to_tracklist(jsonfile)
 
+# download in bulk the tracks from my zeepcreator json list.
+    def bulk_download_favorite_creators(self):
+            wsidlist = []
+            favlist = open("ZeepCreatorlist.json")
+            data = json.load(favlist)
+
+            for x in data:
+                for y in data[x]:
+                    wsidlist.append(data[x][y])
+           
+            for x in wsidlist:
+                userid = requests.get(self.workshoplink.format(str(x)))
+                workshopfile = json.loads(userid.content)
+                user = workshopfile[0]["authorId"]
+                usertracks = requests.get(self.userlink.format(str(user)))
+                jsonfile = json.loads(usertracks.content)
+                self.sort_to_tracklist(jsonfile)
+            
+            # # print (jsonfile)
+            # for x in jsonfile:
+            #     print(x["fileAuthor"], "--->", x["name"], "  ||||  ", x["workshopId"])
+            #     # self.sort_to_tracklist(jsonfile)
+
 # --------------- Searching -----------------------
 
     def search_ws(self, searchTerm, sorting):
@@ -122,3 +147,4 @@ class WorkshopScraper():
         
 classy = WorkshopScraper()
 classy.start()
+# classy.bulk_download_favorite_creators()
