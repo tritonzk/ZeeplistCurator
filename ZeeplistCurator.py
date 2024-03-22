@@ -14,12 +14,19 @@ Workdirectory = os.getcwd()
 class WorkshopScraper():
     def __init__(self):
         self.choicesDict = {} # choices from console
-        self.tracklist = {}
+        self.tracklist = {} 
 
+        # GTR
+        self.gtr_popular = "https://api.zeepkist-gtr.com/levels/popular"
+        self.gtr_hot = "https://api.zeepkist-gtr.com/levels/hot"
+        self.gtr_points = "https://api.zeepkist-gtr.com/levels/points?SortByPoints=true&Ascending=false&Limit={}&Offset=0"
+
+        # Zworpshop
         self.zworpshopGraphHql = "https://graphql.zworpshop.com/"
         self.randomlink = "https://api.zworpshop.com/levels/random?Amount={}"
         self.userlink = "https://api.zworpshop.com/levels/author/{}?IncludeReplaced=false"
         self.workshoplink = "https://api.zworpshop.com/levels/workshop/{}?IncludeReplaced=false"
+        self.zworp_hash = "https://api.zworpshop.com/levels/hash/{}?IncludeReplaced=false&IncludeDeleted=false"
 
         self.searchWsLink = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
         self.searchWsRecent = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=mostrecent&section=&actualsort=mostrecent&p=1"
@@ -39,8 +46,13 @@ class WorkshopScraper():
                 self.info_from_user(str(self.choicesDict["authorId"]))
         elif int(self.choicesDict["functionChoice"]) == 4:
             self.info_from_multiple_worshopid(self.ws_id_from_browsing(self.search_ws(self.choicesDict["searchTerm"], self.choicesDict["sorting"])))
-        elif int(self.choicesDict["functionChoice"]) == 5:
-            self.bulk_download_favorite_creators()
+        elif int(self.choicesDict["functionChoice"]) == 5: # Get tracks from GTR sorting
+            if int(self.choicesDict["gtr_choice"]) == 1: # popular
+                self.get_popular_hashes()
+            elif int(self.choicesDict["gtr_choice"]) == 2: # hot
+                self.get_hot_hashes()
+            elif int(self.choicesDict["gtr_choice"]) == 3: # gtr points
+                self.get_gtr_point_tracks()
 
         if len(self.tracklist) == 0:
             print("\nTrack list is empty. Try again")
@@ -58,7 +70,43 @@ class WorkshopScraper():
         for x in item:
             self.tracklist[x["fileUid"]] = [x["name"], x["fileAuthor"], x["workshopId"]]
 
+# ------------ Get GTR info -------------------------
+            
+    def get_popular_hashes(self):
+        hashes = []
+        popular_hashes = requests.get(self.gtr_popular)
+        jsonfile = json.loads(popular_hashes.content)
+        for x in jsonfile["levels"]:
+            print(x)
+            self.info_from_hash(x['level'])   
+
+    def get_hot_hashes(self):
+        hot_tracks = []
+        hot = requests.get(self.gtr_hot)
+        jsonfile = json.loads(hot.content)
+        for x in jsonfile["levels"]:
+            print(x)
+            self.info_from_hash(x['level'])        
+    
+    def get_gtr_point_tracks(self):
+        point_tracks = []
+        try:
+            point_tracks_with_limit = self.gtr_points.format(self.choicesDict["gtr_point_track_amount"])
+        except:
+            point_tracks_with_limit = self.gtr_points.format(100)
+            print("you did not enter a track amount. Try again")
+        point = requests.get(point_tracks_with_limit)
+        jsonfile = json.loads(point.content)
+        for x in jsonfile["items"]:
+            print(x)
+            self.info_from_hash(x['level'])
+
 # ------------- Zworpshop callouts -------------------
+            
+    def info_from_hash(self, hash):
+        hash_code = requests.get(self.zworp_hash.format(hash))
+        jsonfile = json.loads(hash_code.content)
+        self.sort_to_tracklist(jsonfile)
 
     def info_from_random(self, amount):
         randomtracks = requests.get(self.randomlink.format(str(amount)))
@@ -96,29 +144,6 @@ class WorkshopScraper():
 
         self.sort_to_tracklist(jsonfile)
 
-# download in bulk the tracks from my zeepcreator json list.
-    def bulk_download_favorite_creators(self):
-            wsidlist = []
-            favlist = open("ZeepCreatorlist.json")
-            data = json.load(favlist)
-
-            for x in data:
-                for y in data[x]:
-                    wsidlist.append(data[x][y])
-           
-            for x in wsidlist:
-                userid = requests.get(self.workshoplink.format(str(x)))
-                workshopfile = json.loads(userid.content)
-                user = workshopfile[0]["authorId"]
-                usertracks = requests.get(self.userlink.format(str(user)))
-                jsonfile = json.loads(usertracks.content)
-                self.sort_to_tracklist(jsonfile)
-            
-            # # print (jsonfile)
-            # for x in jsonfile:
-            #     print(x["fileAuthor"], "--->", x["name"], "  ||||  ", x["workshopId"])
-            #     # self.sort_to_tracklist(jsonfile)
-
 # --------------- Searching -----------------------
 
     def search_ws(self, searchTerm, sorting):
@@ -147,4 +172,5 @@ class WorkshopScraper():
         
 classy = WorkshopScraper()
 classy.start()
-# classy.bulk_download_favorite_creators()
+# classy.get_popular_hashes()
+# classy.get_gtr_point_tracks()
