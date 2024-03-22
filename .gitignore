@@ -1,12 +1,4 @@
-
-SteamCmd/*
-!SteamCmd/place_steamcmd_here.txt
-__pycache__
-Old_script/
 _*
 *.zeeplist
-gui.py
-tmp
-tmp/*
 README.md
-zworpshoptest.py
+*.json

@@ -13,7 +13,8 @@ class Console():
             print("2: Download specific workshop ID")
             print("3: create playlist from steamuser")
             print("4: download 30 from searchterm")
-            functionChoice = input("Enter a choice (1,2,3,4): ---> ")
+            print("5: Get track from GTR sorting")
+            functionChoice = input("Enter a choice (1,2,3,4,5): ---> ")
 
             if functionChoice == "1":
                 print("")
@@ -44,6 +45,17 @@ class Console():
                 print("3: Popular (all Time)")
                 self.choicesDict["sorting"] = input("Enter a choice (1,2,3): --->")
                 self.choicesDict["searchTerm"] = input("enter search term: ---> ")
+
+            elif functionChoice == "5":
+                print("")
+                print("Search Popular, Hot, Points")
+                print("1: Popular")
+                print("2: Hot")
+                print("3: Track Points (choose amount of tracks after)")
+                self.choicesDict["gtr_choice"] = input("Enter a choice (1,2,3): --->")
+                if int(self.choicesDict["gtr_choice"]) == 3:
+                    self.choicesDict["gtr_point_track_amount"] = int(input("how many tracks? ---> "))
+    
             
             playlistName = input("name of playlist?: ---> ")
             roundLength = input("length of round in seconds: ---> ")
