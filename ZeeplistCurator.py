@@ -101,12 +101,19 @@ class WorkshopScraper():
             print(x)
             self.info_from_hash(x['level'])
 
-# ------------- Zworpshop callouts -------------------
+# ------------- Zworpshop callouts -------------------5
+            
             
     def info_from_hash(self, hash):
+        print("----", hash)
         hash_code = requests.get(self.zworp_hash.format(hash))
-        jsonfile = json.loads(hash_code.content)
-        self.sort_to_tracklist(jsonfile)
+        if hash_code.status_code == 404:
+            print("error 404")
+            print("*****", hash_code)
+            pass
+        else:
+            jsonfile = json.loads(hash_code.content)
+            self.sort_to_tracklist(jsonfile)
 
     def info_from_random(self, amount):
         randomtracks = requests.get(self.randomlink.format(str(amount)))
