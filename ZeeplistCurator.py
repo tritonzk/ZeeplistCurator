@@ -11,10 +11,11 @@ from Formatting import ZeepfileFormatting as zf
 
 Workdirectory = os.getcwd()
 
-class WorkshopScraper():
+
+class WorkshopScraper:
     def __init__(self):
-        self.choicesDict = {} # choices from console
-        self.tracklist = {} 
+        self.choicesDict = {}  # choices from console
+        self.tracklist = {}  # list of tracks to add to playlist
 
         # GTR
         self.gtr_popular = "https://api.zeepkist-gtr.com/levels/popular"
@@ -24,14 +25,17 @@ class WorkshopScraper():
         # Zworpshop
         self.zworpshopGraphHql = "https://graphql.zworpshop.com/"
         self.randomlink = "https://api.zworpshop.com/levels/random?Amount={}"
-        self.userlink = "https://api.zworpshop.com/levels/author/{}?IncludeReplaced=false"
-        self.workshoplink = "https://api.zworpshop.com/levels/workshop/{}?IncludeReplaced=false"
+        self.userlink = (
+            "https://api.zworpshop.com/levels/author/{}?IncludeReplaced=false"
+        )
+        self.workshoplink = (
+            "https://api.zworpshop.com/levels/workshop/{}?IncludeReplaced=false"
+        )
         self.zworp_hash = "https://api.zworpshop.com/levels/hash/{}?IncludeReplaced=false&IncludeDeleted=false"
 
         self.searchWsLink = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
         self.searchWsRecent = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=mostrecent&section=&actualsort=mostrecent&p=1"
         self.searchWsPopular = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=trend&section=&actualsort=trend&p=1&days=-1"
-
 
     def start(self):
         self.choicesDict = Console.console(self)
@@ -45,13 +49,21 @@ class WorkshopScraper():
             elif "authorId" in self.choicesDict:
                 self.info_from_user(str(self.choicesDict["authorId"]))
         elif int(self.choicesDict["functionChoice"]) == 4:
-            self.info_from_multiple_worshopid(self.ws_id_from_browsing(self.search_ws(self.choicesDict["searchTerm"], self.choicesDict["sorting"])))
-        elif int(self.choicesDict["functionChoice"]) == 5: # Get tracks from GTR sorting
-            if int(self.choicesDict["gtr_choice"]) == 1: # popular
+            self.info_from_multiple_worshopid(
+                self.ws_id_from_browsing(
+                    self.search_ws(
+                        self.choicesDict["searchTerm"], self.choicesDict["sorting"]
+                    )
+                )
+            )
+        elif (
+            int(self.choicesDict["functionChoice"]) == 5
+        ):  # Get tracks from GTR sorting
+            if int(self.choicesDict["gtr_choice"]) == 1:  # popular
                 self.get_popular_hashes()
-            elif int(self.choicesDict["gtr_choice"]) == 2: # hot
+            elif int(self.choicesDict["gtr_choice"]) == 2:  # hot
                 self.get_hot_hashes()
-            elif int(self.choicesDict["gtr_choice"]) == 3: # gtr points
+            elif int(self.choicesDict["gtr_choice"]) == 3:  # gtr points
                 self.get_gtr_point_tracks()
 
         if len(self.tracklist) == 0:
@@ -61,24 +73,30 @@ class WorkshopScraper():
         for x in self.tracklist:
             print(self.tracklist[x])
 
-        zf.zeepfile_Constructor(self, UIDDict = self.tracklist, filename = str(self.choicesDict["name"]), roundlength = int(self.choicesDict["roundlength"]), shuffle = self.choicesDict["shuffle"])
+        zf.zeepfile_Constructor(
+            self,
+            UIDDict=self.tracklist,
+            filename=str(self.choicesDict["name"]),
+            roundlength=int(self.choicesDict["roundlength"]),
+            shuffle=self.choicesDict["shuffle"],
+        )
         input("\nDone! Press Enter to exit")
 
-# ----------- Helper functions ---------------------
+    # ----------- Helper functions ---------------------
 
     def sort_to_tracklist(self, item):
         for x in item:
             self.tracklist[x["fileUid"]] = [x["name"], x["fileAuthor"], x["workshopId"]]
 
-# ------------ Get GTR info -------------------------
-            
+    # ------------ Get GTR info -------------------------
+
     def get_popular_hashes(self):
         hashes = []
         popular_hashes = requests.get(self.gtr_popular)
         jsonfile = json.loads(popular_hashes.content)
         for x in jsonfile["levels"]:
             print(x)
-            self.info_from_hash(x['level'])   
+            self.info_from_hash(x["level"])
 
     def get_hot_hashes(self):
         hot_tracks = []
@@ -86,12 +104,14 @@ class WorkshopScraper():
         jsonfile = json.loads(hot.content)
         for x in jsonfile["levels"]:
             print(x)
-            self.info_from_hash(x['level'])        
-    
+            self.info_from_hash(x["level"])
+
     def get_gtr_point_tracks(self):
         point_tracks = []
         try:
-            point_tracks_with_limit = self.gtr_points.format(self.choicesDict["gtr_point_track_amount"])
+            point_tracks_with_limit = self.gtr_points.format(
+                self.choicesDict["gtr_point_track_amount"]
+            )
         except:
             point_tracks_with_limit = self.gtr_points.format(100)
             print("you did not enter a track amount. Try again")
@@ -99,11 +119,10 @@ class WorkshopScraper():
         jsonfile = json.loads(point.content)
         for x in jsonfile["items"]:
             print(x)
-            self.info_from_hash(x['level'])
+            self.info_from_hash(x["level"])
 
-# ------------- Zworpshop callouts -------------------5
-            
-            
+    # ------------- Zworpshop callouts -------------------5
+
     def info_from_hash(self, hash):
         print("----", hash)
         hash_code = requests.get(self.zworp_hash.format(hash))
@@ -129,8 +148,10 @@ class WorkshopScraper():
         for x in list:
             print("ID = ", x)
             self.info_from_workshopid(x)
-    
+
     def info_from_user(self, user):
+        """checks if user exists on zworpshop and sorts tracks to tracklist"""
+
         if "steamUserId" in self.choicesDict:
             userid = requests.get(self.workshoplink.format(str(user)))
             workshopfile = json.loads(userid.content)
@@ -138,22 +159,24 @@ class WorkshopScraper():
                 print("no such user")
                 quit()
             user = workshopfile[0]["authorId"]
-            
+
         usertracks = requests.get(self.userlink.format(str(user)))
         jsonfile = json.loads(usertracks.content)
-        
+
         if "message" in jsonfile[0]:
             print("no such user")
             quit()
-      
+
         for x in jsonfile:
             print(x)
 
         self.sort_to_tracklist(jsonfile)
 
-# --------------- Searching -----------------------
+    # --------------- Searching -----------------------
 
     def search_ws(self, searchTerm, sorting):
+        """search Steam workshop for searchTerm and choice sorting. Returns the URL of the search"""
+
         if int(sorting) == 1:
             print("relevant sorting")
             searchLink = self.searchWsLink.format(urllib.parse.quote(searchTerm))
@@ -163,21 +186,30 @@ class WorkshopScraper():
         elif int(sorting) == 3:
             print("popular sorting")
             searchLink = self.searchWsPopular.format(urllib.parse.quote(searchTerm))
+        else:
+            searchLink = None
         return searchLink
-    
-    def ws_id_from_browsing(self, browsingLink): 
+
+    def ws_id_from_browsing(self, browsingLink):
+        """takes a Steam page of track items and returns a list of Track Workshop ID's"""
+
         linklist = []
         idlist = []
+        if browsingLink == None:
+            "issue with browsingLink"
+            quit()
         soup = bs(requests.get(browsingLink).text, "html.parser")
         ItemsOnPage = soup.find_all("a", class_="item_link", href=True)
+
         for x in ItemsOnPage:
             linklist.append(x.get("href"))
         for y in linklist:
-            idlist.append(re.compile(r'\d+').search(y).group())
+            idlist.append(re.compile(r"\d+").search(y).group())
         return idlist
 
-        
+
 classy = WorkshopScraper()
 classy.start()
 # classy.get_popular_hashes()
 # classy.get_gtr_point_tracks()
+
