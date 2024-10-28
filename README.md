@@ -1,6 +1,7 @@
 
 # ZeeplistCurator
 This command tool utility creates playlists using Thundernerds Zworpshop and GTR API. I have plans to add a graphical interface and more functions in the future.
+Currently Zworpshop and GTR are down. I am reformatting this script to be able to use either GTR/Zworpshop or SteamCMD and Steam API. This requires the user to input a steam API key so I'd rather not but it might give some more functionality in the end.
 
 ## How to install/use
 Download the release version on the side. Place the *.exe file in your playlist folder at `%Appdata%\Zeepkist\Playlists`.

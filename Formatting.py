@@ -19,7 +19,6 @@ class ZeepfileFormatting():
         self.zeepDict = {}
 
     def zeepfile_Constructor(self, UIDDict, filename, roundlength, shuffle):
-        self.zeepDict = {}
         self.zeepDict.clear()
 
         for x in UIDDict.items():
