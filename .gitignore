@@ -3,3 +3,4 @@ _*
 README.md
 *.json
 key.txt
+.venv
