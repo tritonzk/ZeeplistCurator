@@ -1,75 +1,96 @@
-class Console():
-    def __init__(self) -> None:
-        self.choicesDict = {}
+from os import path
+import questionary as q
 
-    def console(self):
-            print("----------------------------------------------------------------------------------------------------")
-            print("Welcome to ZeepkistRandomizer. Python script written by Triton")
-            print(r"place this program in your playlist folder at: %Appdata%\Zeepkist\Playlists")
-            print("This script searches for tracks using Thundernerds 'Zworpshop API' and creates a playlist in return.")
-            print("You can also search the workshop and get the first 30 results as a playlist\n")
-            
-            print("1: Download randomly")
-            print("2: Download specific workshop ID")
-            print("3: create playlist from steamuser")
-            print("4: download 30 from searchterm")
-            print("5: Get track from GTR sorting")
-            functionChoice = input("Enter a choice (1,2,3,4,5): ---> ")
+choicesDict = {}
 
-            if functionChoice == "1":
-                print("")
-                self.choicesDict["amount"] = input("How many workshop items to download?: ---> ")
-        
-            elif functionChoice == "2":
-                print("")
-                print("for the workshop ID go to a workshop page and copy \n https://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___")
-                self.choicesDict["idchoice"] = input("Enter workshop ID: ---> ")
+functionChoices = [
+    "Random",  # 1
+    "Workshop ID",  # 2
+    "Steam User",  # 3
+    "Search Term",  # 4
+    "GTR Sorting",  # 5
+]
 
-            elif functionChoice == "3":
-                print("")
-                print("do you want to search using:")
-                print("1: AuthorId (id in the zeepfile)")
-                print("2: extract Authorid from a workshop item")
-                self.choicesDict["userFromWorkshop"] = input("Enter a choice (1,2): ---> ")
-                if int(self.choicesDict["userFromWorkshop"]) == 1:
-                    self.choicesDict["authorId"] = input("enter AuthorId: ---> ")
-                elif int(self.choicesDict["userFromWorkshop"]) == 2:
-                    print("\ncopy a workshop Id for a track from the user you want to download from here: \nhttps://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___")
-                    self.choicesDict["steamUserId"] = input("\nenter workshopId: ---> ")
 
-            elif functionChoice == "4":
-                print("")
-                print("Search with what sorting method?")
-                print("1: Relevant")
-                print("2: Recent") 
-                print("3: Popular (all Time)")
-                self.choicesDict["sorting"] = input("Enter a choice (1,2,3): --->")
-                self.choicesDict["searchTerm"] = input("enter search term: ---> ")
+def console():
+    print("----------------------------------------------------------------------")
+    print("Welcome to ZeepkistRandomizer. Python script written by Triton")
+    appdatapath = path.expandvars("%Appdata%\\Zeepkist\\Playlists")
+    print(f"place this program in your playlist folder at:\n {appdatapath}")
+    print(
+        "This script searches for tracks using Thundernerds 'Zworpshop API' and creates a playlist in return."
+    )
+    print("You can also search the workshop and get the first 30 results as a playlist\n")
 
-            elif functionChoice == "5":
-                print("")
-                print("Search Popular, Hot, Points")
-                print("1: Popular")
-                print("2: Hot")
-                print("3: Track Points (choose amount of tracks after)")
-                self.choicesDict["gtr_choice"] = input("Enter a choice (1,2,3): --->")
-                if int(self.choicesDict["gtr_choice"]) == 3:
-                    self.choicesDict["gtr_point_track_amount"] = int(input("how many tracks? ---> "))
-    
-            
-            playlistName = input("name of playlist?: ---> ")
-            roundLength = input("length of round in seconds: ---> ")
-            shuffleChoice = input("shuffle? (y/n): ---> ")
-            if shuffleChoice == ("y" or "Y"):
-                shuffleChoice = True
-            elif shuffleChoice == ("n" or "N"):
-                shuffleChoice = False
-            
+    function = q.select(
+        "Create Playlist",
+        qmark="With: ",
+        choices=functionChoices,
+        use_shortcuts=True,
+    ).ask()
 
-            self.choicesDict["name"] = playlistName
-            self.choicesDict["roundlength"] = roundLength
-            self.choicesDict["functionChoice"] = functionChoice
-            self.choicesDict["shuffle"] = shuffleChoice
-            
-            print("\nchoices: ", self.choicesDict)
-            return self.choicesDict
+    # for i, x in enumerate(function.choices):
+    #     print(i, x)
+
+    match function:
+        case "Random":
+            print("random")
+
+
+    if function == "Random":
+        # print("")
+        n = q.text(message="How many items to download?", default="30").ask()
+        choicesDict["amount"] = int(n)
+
+    elif function == "Workshop ID":
+        print(
+            "for the workshop ID go to a workshop page and copy \n https://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___"
+        )
+        choicesDict["idchoice"] = q.text(message="Enter Workshop ID").ask()
+
+    elif function == "Steam User":
+        if q.confirm("Do you know the author ID?").ask():
+            choicesDict["authorId"] = q.text(message="enter Author Id")
+        else:
+            print(
+                "\ncopy a workshop Id for a track from the user you want to download from here: \nhttps://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___"
+            )
+            choicesDict["steamUserId"] = q.text(message="enter workshop Id").ask()
+
+    elif function == "Search Term":
+        choicesDict["sorting"] = q.select(
+            message="Search with what sorting method?",
+            choices=[
+                "Relevant",
+                "Recent",
+                "Popular (All Time)",
+            ],
+            use_shortcuts=True,
+        ).ask()
+        choicesDict["searchTerm"] = q.text(message="Enter search term").ask()
+
+    elif function == "GTR Sorting":
+        choicesDict["gtr_choice"] = q.select(
+            message="Sorting Method",
+            choices=["Popular", "Hot", "GTR Points"],
+            use_shortcuts=True,
+        ).ask()
+        if choicesDict["gtr_choice"] == "GTR Points":
+            n = q.text(message="how many tracks?").ask()
+            choicesDict["gtr_point_track_amount"] = int(n)
+
+
+    choicesDict["name"] = q.text(message="name of playlist").ask()
+    choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
+    choicesDict["shuffle"] = q.confirm(message="shuffle?").ask()
+    choicesDict["functionChoice"] = (
+        [i for i, x in enumerate(functionChoices) if x == function][0],
+        function,
+    )
+
+    print(choicesDict)
+    return choicesDict
+
+if __name__ == "__main__":
+    console()
+
