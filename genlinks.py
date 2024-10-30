@@ -14,6 +14,28 @@ searchWsLink = "https://steamcommunity.com/workshop/browse/?appid=1440670&search
 searchWsRecent = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=mostrecent&section=&actualsort=mostrecent&p=1"
 searchWsPopular = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=trend&section=&actualsort=trend&p=1&days=-1"
 
+search = 'https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=asdf&childpublishedfileid=0&browsesort=trend&section=readytouseitems&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0'
+
+search_split = search.split('&')
+pprint(search_split)
+
+#NOTE: order: base + browsesort + section + actualsort + page + day
+
+baselink = 'https://steamcommunity.com/workshop/browse/?appid=1440670'
+search = "&searchtext={}"
+
+browsesort= "&browsesort={s}"
+browsesort_opt = ["textsearch", "mostrecent", "trend", "playtime_trend", "lastupdated", "totaluniquesubscribers"]
+
+section = "&section={s}"
+secton_opt = ["readytouseitems"]
+
+actualsort = "actualsort={s}"
+actualsort_opt = ["textsearch", "mostrecent", "trend", "playtime_trend", "lastupdated", "totaluniquesubscribers"]
+
+page = "p={d}"
+day = "days={d}" # only for trend and 
+
 
 class GenLinks:
     def __init__(self) -> None:
