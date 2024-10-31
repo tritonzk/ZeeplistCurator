@@ -329,19 +329,19 @@ class WorkshopScraper:
         #  TODO: check length
         subprocess.run("steamcmd +login anonymous{} +quit".format(dlCommand))
 
-    def get_user_tracks(self, user: int, page: int) -> list:
-        """use scraper to get tracks from user page. currently only one page"""
-        #  TODO: option to donwload from multiple pages
-        tracklist = []
-        soup = bs(
-            requests.get(self.steamuserWorkshop.format(user=user, page=page)).text,
-            "html.parser",
-        )
-        tracks = soup.find_all("a", class_="ugc", href=True)
-        # print(tracks)
-        for x in tracks:
-            tracklist.append(x.get("data-publishedfileid"))
-        return tracklist
+    # def get_user_tracks(self, user: int, page: int) -> list:
+    #     """use scraper to get tracks from user page. currently only one page"""
+    #     #  TODO: option to donwload from multiple pages
+    #     tracklist = []
+    #     soup = bs(
+    #         requests.get(self.steamuserWorkshop.format(user=user, page=page)).text,
+    #         "html.parser",
+    #     )
+    #     tracks = soup.find_all("a", class_="ugc", href=True)
+    #     # print(tracks)
+    #     for x in tracks:
+    #         tracklist.append(x.get("data-publishedfileid"))
+    #     return tracklist
 
     # [V] create dict with workshop Id, author and UID extracted from zeepfiles
     def extract_info_from_steamCMD_downloads(self) -> None:
