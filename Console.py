@@ -1,3 +1,4 @@
+import os
 from os import path
 import questionary as q
 from pprint import pprint
@@ -19,6 +20,7 @@ functionChoices = [
     "--Exit--"
 ]
 
+program_path = os.getcwd()
 
 def console():
     print("----------------------------------------------------------------------")

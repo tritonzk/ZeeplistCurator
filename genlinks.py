@@ -36,8 +36,8 @@ class GenLinks:
             "lastupdated",
             "totaluniquesubscribers",
         ]
-        self.browsesort = "&browsesort={0}&section=readytouseitems&actualsort={0}"
 
+        self.browsesort = "&browsesort={0}&section=readytouseitems&actualsort={0}"
         self.steam_search = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
         self.daylist = [1, 7, 30, 90, 180, 365, -1]
 
