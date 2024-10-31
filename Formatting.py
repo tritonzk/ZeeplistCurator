@@ -14,11 +14,11 @@ trackFormat = {"UID": "",
         "Name": "",
         "Author": ""}
 
-class ZeepfileFormatting():
+class ZeeplistFormat():
     def __init__(self):
         self.zeepDict = {}
 
-    def zeepfile_Constructor(self, UIDDict, filename, roundlength, shuffle):
+    def zeeplist_constructor(self, UIDDict, filename, roundlength, shuffle):
         self.zeepDict.clear()
 
         for x in UIDDict.items():
@@ -40,5 +40,14 @@ class ZeepfileFormatting():
         playlistFile = open(filename + ".zeeplist", "w")
         json.dump(self.zeepDict, playlistFile, indent =  2)
         playlistFile.close()
+
+    def get_json_from_zeeplist(self, file:str):
+        file_open = open(file, 'r')
+
+        zeeplist = json.loads(file_open)
+        zeeplist.
+        
+        pass
+
 
 

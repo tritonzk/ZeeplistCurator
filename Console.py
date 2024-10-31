@@ -91,6 +91,10 @@ def console():
     print(choicesDict)
     return choicesDict
 
+
+
+
+
 if __name__ == "__main__":
     console()
 

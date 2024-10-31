@@ -8,7 +8,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 
 from Console import console
-from Formatting import ZeepfileFormatting as zf
+from Formatting import ZeeplistFormat as zl
 
 
 Workdirectory = os.getcwd()
@@ -63,7 +63,7 @@ class WorkshopScraper:
                 quit()
 
 
-        zf().zeepfile_Constructor(
+        zl().zeeplist_constructor(
             UIDDict=self.tracklist,
             filename=str(self.choicesDict["name"]),
             roundlength=int(self.choicesDict["roundlength"]),

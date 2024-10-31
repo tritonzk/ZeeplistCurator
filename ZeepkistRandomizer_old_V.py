@@ -1,4 +1,4 @@
-from Formatting import ZeepfileFormatting
+from Formatting import ZeeplistFormat
 
 from pathlib import Path
 import subprocess
@@ -18,7 +18,7 @@ import inspect
 from bs4 import BeautifulSoup as bs
 
 Workdirectory = os.getcwd()
-zf = ZeepfileFormatting()
+zf = ZeeplistFormat()
 
 SteamCmdLink = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd.zip"
 
