@@ -18,18 +18,36 @@ Workdirectory = os.getcwd()
 # - Clean up code to use return statements instead of changing the playlist themselves
 
 
+functionChoices = [
+    "Random",  # 1
+    "Workshop ID",  # 2
+    "Steam User",  # 3
+    "Search Term",  # 4
+    "GTR Sorting",  # 5
+    "--Exit--"
+]
 class WorkshopScraper:
     def __init__(self):
-        self.choicesDict = {}  # choices from console
+        self.choicesDict = {} # choices from console
         self.tracklist = {}  # list of tracks to add to playlist
 
     def start(self):
         self.choicesDict = console()
 
-        match int(self.choicesDict["functionChoice"][0]):
-            case 0:
-                print("No choice given. Try again.")
-                quit()
+        match self.choicesDict["functionChoice"]:
+            case "Random":
+                pass
+            case "Workshop ID":
+                pass
+            case "Steam User":
+                pass
+            case "Search Term":
+                pass
+            case "GTR Sorting":
+                pass
+            case _:
+                pass
+
             # case 1:
             #     self.get_zworp_random(int(self.choicesDict["amount"]))
             # case 2:
@@ -55,13 +73,13 @@ class WorkshopScraper:
             #     elif int(self.choicesDict["gtr_choice"]) == 3:  # gtr points
             #         self.get_gtr_point_tracks()
 
-
         if len(self.tracklist) == 0:
-            if q.confirm(message="Track list is empty. Try again? press n to quit.").ask():
+            if q.confirm(
+                message="Track list is empty. Try again? press n to quit."
+            ).ask():
                 self.start()
             else:
                 quit()
-
 
         zl().zeeplist_constructor(
             UIDDict=self.tracklist,
@@ -70,12 +88,10 @@ class WorkshopScraper:
             shuffle=self.choicesDict["shuffle"],
         )
 
-
     # ----------- Helper functions ---------------------
 
-    def sort_to_tracklist(
-        self, item
-    ):  # NOTE: change this to use returns from other functions. call this last
+    def sort_to_tracklist(self, item):
+        # NOTE: change this to use returns from other functions. call this last
         "sort track json data to tracklist"
         for x in item:
             self.tracklist[x["fileUid"]] = [x["name"], x["fileAuthor"], x["workshopId"]]

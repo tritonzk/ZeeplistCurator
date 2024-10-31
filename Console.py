@@ -1,7 +1,14 @@
 from os import path
 import questionary as q
+from pprint import pprint
 
-choicesDict = {}
+from genlinks import GenLinks
+
+choicesDict = {
+    "shuffle":False,
+    "amount":0,
+    "idchoice":"",
+}
 
 functionChoices = [
     "Random",  # 1
@@ -9,32 +16,32 @@ functionChoices = [
     "Steam User",  # 3
     "Search Term",  # 4
     "GTR Sorting",  # 5
+    "--Exit--"
 ]
 
 
 def console():
     print("----------------------------------------------------------------------")
-    print("Welcome to ZeepkistRandomizer. Python script written by Triton")
+    print("Welcome to ZeeplistCurator. Python script written by Triton")
     appdatapath = path.expandvars("%Appdata%\\Zeepkist\\Playlists")
-    print(f"place this program in your playlist folder at:\n {appdatapath}")
-    print(
-        "This script searches for tracks using Thundernerds 'Zworpshop API' and creates a playlist in return."
-    )
-    print("You can also search the workshop and get the first 30 results as a playlist\n")
+    print(f"Place this program in your playlist folder at:\n {appdatapath}")
+    print("\nThis script creates playlists and downloads Zeepkist tracks using: ")
+    print("- Thundernerds 'Zworpshop' and 'GTR' API")
+    print("- Steam API (for info) and SteamCMD (download tracks)")
+    print("- Steam Webscraping using BeautifulSoup4") #NOTE: done
+    print("- Searching through local playlist and track files")
+
+    print("\n")
+
+    print("\nstatus of services:")
+
+    GenLinks().check_connection()
 
     function = q.select(
         "Create Playlist",
-        qmark="With: ",
         choices=functionChoices,
         use_shortcuts=True,
     ).ask()
-
-    # for i, x in enumerate(function.choices):
-    #     print(i, x)
-
-    match function:
-        case "Random":
-            print("random")
 
 
     if function == "Random":
@@ -70,14 +77,18 @@ def console():
         choicesDict["searchTerm"] = q.text(message="Enter search term").ask()
 
     elif function == "GTR Sorting":
-        choicesDict["gtr_choice"] = q.select(
-            message="Sorting Method",
-            choices=["Popular", "Hot", "GTR Points"],
-            use_shortcuts=True,
-        ).ask()
-        if choicesDict["gtr_choice"] == "GTR Points":
-            n = q.text(message="how many tracks?").ask()
-            choicesDict["gtr_point_track_amount"] = int(n)
+        print("unfortunately the GTR API is down currently so this functionality is broken. \nI will release a new version once it is up again.")
+        # choicesDict["gtr_choice"] = q.select(
+        #     message="Sorting Method",
+        #     choices=["Popular", "Hot", "GTR Points"],
+        #     use_shortcuts=True,
+        # ).ask()
+        # if choicesDict["gtr_choice"] == "GTR Points":
+        #     n = q.text(message="how many tracks?").ask()
+        #     choicesDict["gtr_point_track_amount"] = int(n)
+    elif function == "--Exit--":
+        print("quiting program")
+        quit()
 
 
     choicesDict["name"] = q.text(message="name of playlist").ask()
@@ -88,11 +99,8 @@ def console():
         function,
     )
 
-    print(choicesDict)
+    pprint("choices: {}".format(choicesDict))
     return choicesDict
-
-
-
 
 
 if __name__ == "__main__":

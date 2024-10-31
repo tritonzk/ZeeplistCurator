@@ -41,13 +41,17 @@ class ZeeplistFormat():
         json.dump(self.zeepDict, playlistFile, indent =  2)
         playlistFile.close()
 
-    def get_json_from_zeeplist(self, file:str):
+    def get_dict_from_zeeplist(self, file:str) -> dict:
         file_open = open(file, 'r')
+        json_data = json.load(file_open)
+        return json_data
 
-        zeeplist = json.loads(file_open)
-        zeeplist.
-        
+    def get_data_from_zeeptrack(self, track:str):
         pass
 
+
+if __name__ == "__main__":
+    m = ZeeplistFormat()
+    m.get_dict_from_zeeplist("sfad.zeeplist")
 
 

@@ -19,15 +19,15 @@ class LocalTracks:
             for x in os.listdir(self.local_playlists)
             if os.path.isdir(self.local_playlists + "\\" + x)
         ]
-
+        
         playlist_dirs.append(self.local_playlists)
         playlist_paths = []
-
         for d in playlist_dirs:
             if d == self.local_playlists:
                 pass
 
             files = os.listdir(d)
+
             for f in files:
                 if os.path.isfile(d + "\\" + f):
                     playlist_paths.append(d + "\\" + f)
@@ -37,19 +37,10 @@ class LocalTracks:
 
         return playlist_paths
 
-
-    def get_playlist_data(self, playlist):
+    def get_zeeplist_data(self, playlist):
         with open(playlist) as p:
             first_line = p.readline()
-
         print(first_line)
-
-
-        pass
-
-
-    def get_data_from_zeeplist(self, file):
-        pass
 
     def from_author(self, author):
         """get track data from downloaded tracks of author"""

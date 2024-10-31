@@ -1,77 +1,84 @@
-import urllib.parse
-from pathlib import Path
-import subprocess
+from urllib.request import urlopen
 import requests
-import random as rand
+from urllib import request
 import re
-import os
+import subprocess
 import json
-import csv
-import shutil
-import urllib.parse
-import zipfile
 
 from bs4 import BeautifulSoup as bs
+from genlinks import GenLinks
+
+g = GenLinks()
 
 
-def info_from_user(self, user):
-    """checks if user exists on zworpshop and sorts tracks to tracklist"""
+class SteamScrape:
+    def __init__(self) -> None:
+        """get data from steam using Steam API, SteamCMD and Webscraping"""
+        pass
 
-    if "steamUserId" in self.choicesDict:
-        userid = requests.get(self.workshoplink.format(str(user)))
-        workshopfile = json.loads(userid.content)
-        if "message" in workshopfile[0]:
-            print("no such user")
-            quit()
-        user = workshopfile[0]["authorId"]
+    # NOTE: Utils
 
-    usertracks = requests.get(self.userlink.format(str(user)))
-    jsonfile = json.loads(usertracks.content)
+    def bsoup(self, link) -> bs:
+        """return a bs4 object from given link"""
+        return bs(requests.get(link).text, "html.parser")
 
-    if "message" in jsonfile[0]:
-        print("no such user")
-        quit()
+    def get_max_workshop_page(self, wsLink: str) -> int:
+        """return last page number of Steam items page"""
+        soup = self.bsoup(wsLink)
+        pageNumberLinks = soup.find_all("a", class_="pagelink")
+        maxPage = bs.get_text(pageNumberLinks[-1])
+        return int(maxPage)
 
-    for x in jsonfile:
-        print(x)
+    # NOTE: Steam Scraping
 
-    self.sort_to_tracklist(jsonfile)
+    def get_workshop_ids_from_steam_page(
+        self,
+        user,
+        pagetype,
+        pages=1,
+    ) -> list[int]:
+        """return 30 tracks per page from the given author page. enter -1 for all pages"""
+        idlist = []
+        maxpage = self.get_max_workshop_page(g.get_workshop_link_from_username(user))
 
-# --------------- Searching -----------------------
+        match pagetype:
+            case "browse":
+                c = "item_link"
+            case "user":
+                c = "ugc"
+            case _:
+                print("incorrect pagetype. enter 'browse' or 'user'")
+                quit()
 
-def get_browse_from_searchterm(self, searchTerm, sorting):
-    """search Steam workshop for searchTerm and choice sorting. Returns the URL of the search using bsd4"""
+        if pages == -1:
+            pages = maxpage + 1
+        elif pages > maxpage:
+            print(f"there are only {maxpage} pages")
+        else:
+            pages += 1
 
-    if int(sorting) == 1:
-        print("relevant sorting")
-        searchLink = self.searchWsLink.format(urllib.parse.quote(searchTerm))
-    elif int(sorting) == 2:
-        print("recent sorting")
-        searchLink = self.searchWsRecent.format(urllib.parse.quote(searchTerm))
-    elif int(sorting) == 3:
-        print("popular sorting")
-        searchLink = self.searchWsPopular.format(urllib.parse.quote(searchTerm))
-    else:
-        searchLink = None
-    return searchLink
+        for x in range(1, pages):
+            link = g.get_workshop_link_from_username(user, x)
+            print(link)
+            soup = self.bsoup(link)
+            linklist = []
+            items_on_page = soup.find_all("a", class_=c, href=True)
+            for x in items_on_page:
+                linklist.append(x.get("href"))
+            for y in linklist:
+                idlist.append(re.compile(r"\d+").search(y).group())
+        return idlist
 
-def get_workshopid_list_from_browse(self, browsingLink):
-    """takes a Steam page of track items and returns a list of Track Workshop ID's using bsd4"""
+    def get_workshop_item_metadata(self, workshopId: str):
+        """get steam workshop item metadata"""
+        pass
 
-    linklist = []
-    idlist = []
-    if browsingLink == None:
-        "issue with browsingLink"
-        quit()
-    soup = bs(requests.get(browsingLink).text, "html.parser")
-    ItemsOnPage = soup.find_all("a", class_="item_link", href=True)
-
-    for x in ItemsOnPage:
-        linklist.append(x.get("href"))
-    for y in linklist:
-        idlist.append(re.compile(r"\d+").search(y).group())
-    return idlist
+        # wsMetadata = subprocess.run(
+        #     r"steamctl --anonymous workshop info {}".format(workshopId)
+        # )
 
 
-
-
+if __name__ == "__main__":
+    m = SteamScrape()
+    # print(m.get_workshop_ids_from_user_page("Shadynook", 6))
+    m.get_workshop_item_metadata("3196209568")

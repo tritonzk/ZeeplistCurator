@@ -1,18 +1,19 @@
 from pprint import pprint
 import questionary as q
+from urllib import request, parse
 
 # NOTE: GTR
-gtr_base = "https://api.zeepkist-gtr.com/levels/"
-gtr_opt = [
+gtr_base: str = "https://api.zeepkist-gtr.com/levels/"
+gtr_opt: list = [
     "popular",
     "hot",
     "points?SortByPoints=true&Ascending=false&Limit={}&Offset=0",
 ]
 
 # NOTE: Zworpshop
-zworpshopGraphHql = "https://graphql.zworpshop.com/"
-zworp_base = "https://api.zworpshop.com/levels/"
-zworp_opt = {
+zworpshopGraphHql: str = "https://graphql.zworpshop.com/"
+zworp_base: str = "https://api.zworpshop.com/levels/"
+zworp_opt: dict = {
     "random": "random?Amount={}",
     "author": "author/{}?IncludeReplaced=false",
     "workshop": "workshop/{}?IncludeReplaced=false",
@@ -21,43 +22,11 @@ zworp_opt = {
 
 # NOTE: Steam
 # WARN: order: base + browsesort + section + actualsort + page + day
-search = "&searchtext={}"
-
-browsesort = "&browsesort={s}"
-searchtext = "%searchtext={}"
-sort_opt = [
-    "textsearch",
-    "mostrecent",
-    "trend",
-    "playtime_trend",
-    "lastupdated",
-    "totaluniquesubscribers",
-]
-
-section = "&section={s}"
-secton_opt = ["readytouseitems"]
-actualsort = "&actualsort={s}"  # use sort_opt
-
-page = "p={d}"
-day = "days={d}"  # only for trend and playtime_trend
-
-day_opt = [1, 7, 30, 90, 180, 365, -1]
-pprint(day_opt)
-
-
-# searchWsLink = baselink + "&searchtext={}&browsesort=textsearch&section=readytouseitems"
-# searchWsRecent = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=mostrecent&section=&actualsort=mostrecent&p=1"
-# searchWsPopular = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=trend&section=&actualsort=trend&p=1&days=-1"
-#
-# search = 'https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext=asdf&childpublishedfileid=0&browsesort=trend&section=readytouseitems&created_date_range_filter_start=0&created_date_range_filter_end=0&updated_date_range_filter_start=0&updated_date_range_filter_end=0'
-
-
-# search_split = search.split('&')
-# pprint(search_split)
 
 
 class GenLinks:
     def __init__(self) -> None:
+        '''Class to generate steam, gtr and zworpshop links for Web scraping and API calls'''
         self.baselink = "https://steamcommunity.com/workshop/browse/?appid=1440670"
         self.sort_opt = [
             "textsearch",
@@ -72,11 +41,28 @@ class GenLinks:
         self.steam_search = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
         self.daylist = [1, 7, 30, 90, 180, 365, -1]
 
-    def check_connection(self ,check):
+    def check_connection(self) -> None:
         """steam, gtr, zworpshop connection check"""
-        pass
+        connect = {
+            "gtr": ("https://api.zeepkist-gtr.com", None),
+            "zworpshop": ("https://api.zworpshop.com/levels/", None),
+            "steam": (self.baselink, None),
+        }
+
+        for x in connect:
+            try:
+                request.urlopen(x)
+                print("connected to: ", x)
+            except:
+                print("no connection: ", x)
+
+    def get_workshop_link_from_username(self, user:str, page=1) -> str:
+        '''return published tracks list from steam username '''
+        return "https://steamcommunity.com/id/{0}/myworkshopfiles/?appid=1440670&p={1}&numperpage=30".format(user, page)
+
 
     def steam_link_console(self) -> str:
+        '''questionary console to generate a steam workshop link'''
         sortchoice = q.select(
             message="select sorting method",
             choices=[
@@ -138,10 +124,12 @@ class GenLinks:
         )
 
     def steam_link(self, sort: str, page: int, days: int, searchterm: str) -> str:
+        '''return a steam workshop link for the given arguments. Use steam_link_console to generate using
+        questionary console'''
         if searchterm != "":
             link = (
                 self.baselink
-                + "&searchtext={}".format(searchterm)
+                + "&searchtext={}".format(parse.quote(searchterm))
                 + self.browsesort.format(sort)
                 + "&p={}".format(days)
             )
@@ -156,7 +144,7 @@ class GenLinks:
 
 if __name__ == "__main__":
     m = GenLinks()
-    print(m.steam_link_console())
+    print(m.check_connection())
 
     # print(
     #     m.steam_link(
