@@ -37,18 +37,22 @@ class SteamScrape:
     def get_workshop_ids_from_browse_page(
         self,
         link,
-        ) -> list[int]:
-        '''return list of 30 track ids per page from the given browsing page.'''
+    ) -> list[int]:
+        """return list of 30 track ids per page from the given browsing page using bs4."""
         idlist = []
         # maxpage = self.get_max_workshop_page(link)
 
         soup = self.bsoup(link)
         linklist = []
         items_on_page = soup.find_all("a", class_="item_link", href=True)
+
         for x in items_on_page:
             linklist.append(x.get("href"))
         for y in linklist:
             idlist.append(re.compile(r"\d+").search(y).group())
+
+        print(f"idlist: {idlist}")
+
         return idlist
 
     def get_workshop_ids_from_user_page(
@@ -56,7 +60,7 @@ class SteamScrape:
         user,
         pages=1,
     ) -> list[int]:
-        """Return 30 tracks per page from the given author page. 
+        """Return 30 tracks per page from the given author page using bs4.
         Enter page-number for multiple pages. enter -1 for all pages"""
         idlist = []
         maxpage = self.get_max_workshop_page(g.get_workshop_link_from_username(user))
@@ -88,32 +92,48 @@ class SteamScrape:
 
     def steamCMD_downloader(self, idlist: list[int]) -> None:
         """download all items from a workshop ID list"""
-        os.chdir(self.local_tracks_folder)
         dlCommand = ""
 
         newlist = []
         idlen = len(idlist)
-        move = 20
-        idx = move
-        running = True
-        while running:
-            newlist.append(idlist[idx - move : idx])
-            if (idx + move) > idlen:
-                break
-            else:
-                idx += move
+        dlCommand = ""
 
-        if idx > move:
-            for lst in newlist:
-                for y in range(0, len(lst)):
-                    dlCommand += " +workshop_download_item 1440670 {workshopId}".format(
-                        workshopId=idlist[y]
-                    )
-                subprocess.run("{}\\SteamCmd\\steamcmd +login anonymous{} +quit".format(program_path, dlCommand))
+        for id in idlist:
+            dlCommand += " +workshop_download_item 1440670 {0}".format(id)
+
+        print(f"length dlcommand: {len(dlCommand)}")
+
+        subprocess.run(
+            "{0}\\SteamCmd\\steamcmd +login anonymous{1} +quit".format(
+                program_path, dlCommand
+            )
+        )
+
+
+        # move = 20
+        # idx = move
+        # running = True
+        # while running:
+        #     newlist.append(idlist[idx - move : idx])
+        #     if (idx + move) > idlen:
+        #         break
+        #     else:
+        #         idx += move
+
+        # if idx > move:
+        #     for lst in newlist:
+        #         for y in range(0, len(lst)):
+        #             dlCommand += " +workshop_download_item 1440670 {workshopId}".format(
+        #                 workshopId=idlist[y]
+        #             )
 
     def download_steam_item(self, workshopid):
         dlCommand = " +workshop_download_item 1440670 {}".format(workshopid)
-        subprocess.run("{}\\SteamCmd\\steamcmd +login anonymous{} +quit".format(program_path, dlCommand))
+        subprocess.run(
+            "{}\\SteamCmd\\steamcmd +login anonymous{} +quit".format(
+                program_path, dlCommand
+            )
+        )
 
         # wsMetadata = subprocess.run(
         #     r"steamctl --anonymous workshop info {}".format(workshopId)
@@ -122,7 +142,16 @@ class SteamScrape:
 
 if __name__ == "__main__":
     m = SteamScrape()
-    m.local_tracks_folder
+
+    m.steamCMD_downloader(
+        m.get_workshop_ids_from_browse_page(
+            g.steam_link(sort="trend", page=2, days=-1, searchterm="zsl")
+        )
+    )
+
+
+
+
+    # print(g.steam_link(sort="trend", page=2, days=-1, searchterm="zsl"))
     # print(m.get_workshop_ids_from_user_page("Shadynook", 6))
     # m.get_workshop_item_metadata("3196209568")
-    # m.download_steam_item(3196209568)

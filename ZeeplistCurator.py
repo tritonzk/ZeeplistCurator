@@ -26,6 +26,7 @@ functionChoices = [
     "GTR Sorting",  # 5
     "--Exit--"
 ]
+
 class WorkshopScraper:
     def __init__(self):
         self.choicesDict = {} # choices from console

@@ -26,7 +26,7 @@ zworp_opt: dict = {
 
 class GenLinks:
     def __init__(self) -> None:
-        '''Class to generate steam, gtr and zworpshop links for Web scraping and API calls'''
+        """Class to generate steam, gtr and zworpshop links for Web scraping and API calls"""
         self.baselink = "https://steamcommunity.com/workshop/browse/?appid=1440670"
         self.sort_opt = [
             "textsearch",
@@ -45,24 +45,25 @@ class GenLinks:
         """steam, gtr, zworpshop connection check"""
         connect = {
             "gtr": ("https://api.zeepkist-gtr.com", None),
-            "zworpshop": ("https://api.zworpshop.com/levels/", None),
+            "zworpshop": ("https://api.zworpshop.com", None),
             "steam": (self.baselink, None),
         }
 
-        for x in connect:
+        for x in connect.items():
             try:
-                request.urlopen(x)
-                print("connected to: ", x)
+                request.urlopen(x[1][0])
+                print("connected: ", x[0])
             except:
-                print("no connection: ", x)
+                print("no connection: ", x[1][0])
 
-    def get_workshop_link_from_username(self, user:str, page=1) -> str:
-        '''return published tracks list from steam username '''
-        return "https://steamcommunity.com/id/{0}/myworkshopfiles/?appid=1440670&p={1}&numperpage=30".format(user, page)
-
+    def get_workshop_link_from_username(self, user: str, page=1) -> str:
+        """return published tracks list from steam username"""
+        return "https://steamcommunity.com/id/{0}/myworkshopfiles/?appid=1440670&p={1}&numperpage=30".format(
+            user, page
+        )
 
     def steam_link_console(self) -> str:
-        '''questionary console to generate a steam workshop link'''
+        """questionary console to generate a steam workshop link"""
         sortchoice = q.select(
             message="select sorting method",
             choices=[
@@ -73,6 +74,7 @@ class GenLinks:
                 "Last Update",
             ],
         ).ask()
+
         match sortchoice:
             case "Popular":
                 sortchoice = "trend"
@@ -124,19 +126,23 @@ class GenLinks:
         )
 
     def steam_link(self, sort: str, page: int, days: int, searchterm: str) -> str:
-        '''return a steam workshop link for the given arguments. Use steam_link_console to generate using
-        questionary console'''
+        """return a steam workshop link for the given arguments.
+        Use steam_link_console to generate using questionary console.
+        sort terms: textsearch, mostrecent, trend, playtime_trend,
+        lastupdated, totaluniquesubscribers
+        days: 1, 7, 30, 90, 180, 365, -1"""
+
         if searchterm != "":
             link = (
                 self.baselink
                 + "&searchtext={}".format(parse.quote(searchterm))
                 + self.browsesort.format(sort)
-                + "&p={}".format(days)
+                + "&p={}".format(page)
             )
         else:
             link = self.baselink + self.browsesort.format(sort) + "&p={}".format(page)
 
-        if sort == ("playtime_trend" or "trend"):
+        if sort == "playtime_trend" or sort == "trend":
             link = link + "&days={}".format(days)
 
         return link
@@ -144,7 +150,9 @@ class GenLinks:
 
 if __name__ == "__main__":
     m = GenLinks()
-    print(m.check_connection())
+    # m.check_connection()
+
+    print(m.steam_link(sort="trend", page=2, days=-1, searchterm="zsl"))
 
     # print(
     #     m.steam_link(
