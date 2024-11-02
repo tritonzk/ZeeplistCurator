@@ -1,7 +1,10 @@
 _*
 *.zeeplist
 README.md
-*.json
 key.txt
 .venv
 SteamCmd
+.gitignore
+build
+dist
+*.egg-info

@@ -1,15 +1,12 @@
-import json
 import os
-import re
-import urllib.parse
 import questionary as q
 
-import requests
 from bs4 import BeautifulSoup as bs
 
-from Console import console
+from Console import Console
 from Formatting import ZeeplistFormat as zl
-
+from scrape_Steam import SteamScrape as steam
+from genlinks import GenLinks as gen
 
 Workdirectory = os.getcwd()
 
@@ -33,7 +30,7 @@ class WorkshopScraper:
         self.tracklist = {}  # list of tracks to add to playlist
 
     def start(self):
-        self.choicesDict = console()
+        self.choicesDict = Console().console()
 
         match self.choicesDict["functionChoice"]:
             case "Random":
