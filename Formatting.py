@@ -5,8 +5,9 @@ from glob import glob
 from pathlib import Path, PurePath
 import shutil
 import io
+import sqlite3 as sq
 
-from Console import program_path
+from ZeeplistCurator import program_path
 
 zeeplistFormat = {
     "name": "",
@@ -52,7 +53,6 @@ class ZeeplistFormat:
         ) as playlistFile:
             json.dump(self.zeepDict, playlistFile, indent=4, ensure_ascii=False)
 
-
     def get_dict_from_local_tracks(self, path: str, custom=""):
         """create dictionary with Workshop ID, Author and UID extracted from zeepfiles
         path vars: 'steamcmd', 'local', 'custom'. If custom enter a custom path."""
@@ -72,14 +72,14 @@ class ZeeplistFormat:
             case "custom":
                 workshop_path = custom
 
-        #TODO: learn glob. This is so much faster and easy.
+        # TODO: learn glob. This is so much faster and easy.
         zeeplevels = [
             y
             for x in os.walk(workshop_path)
             for y in glob(os.path.join(x[0], "*.zeeplevel"))
         ]
 
-        #TODO: seperate lists so they don't get too large
+        # TODO: seperate lists so they don't get too large
         for x in range(len(zeeplevels)):
             workshop_item = PurePath(zeeplevels[x]).parts[-3]
             fullpath = zeeplevels[x]
@@ -93,7 +93,10 @@ class ZeeplistFormat:
             items = []
             with io.open(zeeplevelfile_path[x], "r", encoding="utf-8-sig") as csvfile:
                 items = csvfile.readline().split(",")
-                print(f"items: {items}")
+                try:
+                    print(f"items: {items}")
+                except:
+                    print("couldn't print line")
 
             name = os.path.split(zeeplevelfile_path[x])[1].split(".")[0]
             uid_dict[x + " " + name] = {
@@ -111,7 +114,31 @@ class ZeeplistFormat:
         # print("\n___Workshop Id's: ", items, "\n")
         return uid_dict
 
-    #NOTE: ------------------- Helper scripts -------------------------------
+    # NOTE: ------------------- Helper scripts -------------------------------
+    def put_uid_dict_in_db(self, UID:dict[str, dict[str, str]]):
+        con = sq.connect(program_path + "\\data.db")
+        cur = con.cursor()
+        # cur.execute("CREATE TABLE track(UID, WorkshopID, Name, Author, played)")
+
+        # data = [
+        #     ("234235467-asldkfjoweifn-2382748", 2342243425, 'moretrack', 'Triton', False),
+        # ]
+
+        tracks = []
+
+        for x in UID.items():
+            data = x[1]
+            tracks.append((data["authorid"], data["workshopid"] , data["name"] ,data["author"] , "0"))
+            print(f"track: {tracks}")
+
+        cur.executemany("INSERT OR IGNORE INTO tracks VALUES(?,?,?,?,?)", tracks)
+        con.commit()
+
+        # cur.executemany("INSERT INTO track VALUES(?,?,?,?,?)", data)
+        # con.commit()
+
+        # res = cur.execute("SELECT * FROM track")
+        # print(res.fetchall())
 
     def get_dict_from_zeeplist(self, file: str) -> dict:
         with io.open(file, "r", encoding="utf-8-sig", newline="") as file_open:
@@ -129,12 +156,19 @@ if __name__ == "__main__":
     m = ZeeplistFormat()
     # m.get_dict_from_local_tracks(path="C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670\\3058108746\\ZSL - Arashi")
     # m.get_dict_from_zeeplist("sfad.zeeplist")
-    m.zeeplist_constructor(
-        filename="zls_pop_test",
-        UIDDict=m.get_dict_from_local_tracks(
-            path="steamcmd",
-            custom="C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670\\3050923416\\ZSL - Arashi",
-        ),
-        roundlength=480,
-        shuffle=False,
-    )
+    # m.zeeplist_constructor(
+    #     filename="zls_pop_test",
+    #     UIDDict=m.get_dict_from_local_tracks(
+    #         path="steamcmd",
+    #         custom="C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670\\3050923416\\ZSL - Arashi",
+    #     ),
+    #     roundlength=480,
+    #     shuffle=False,
+    # )
+    m.put_uid_dict_in_db(
+        m.get_dict_from_local_tracks(
+            path = "custom",
+            custom = "C:\\Users\\Thijmen\\Documents\\GitHub\\ZeepkistRandomizer\\SteamCmd\\steamapps\\workshop\\content\\1440670",
+            
+
+        ))

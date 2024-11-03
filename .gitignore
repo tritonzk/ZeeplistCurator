@@ -8,3 +8,4 @@ SteamCmd
 build
 dist
 *.egg-info
+*.db

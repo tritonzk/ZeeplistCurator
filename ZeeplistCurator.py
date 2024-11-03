@@ -1,14 +1,14 @@
 import os
 import questionary as q
 
-from bs4 import BeautifulSoup as bs
-
 from Console import Console
 from Formatting import ZeeplistFormat as zl
 from scrape_Steam import SteamScrape as steam
 from genlinks import GenLinks as gen
 
-Workdirectory = os.getcwd()
+s = steam()
+
+program_path = os.getcwd()
 
 # todo
 # - Change dependency on Zworpshop and GTR (Have an alternative option to use Steam search or Steam ws downloader)
@@ -21,12 +21,13 @@ functionChoices = [
     "Steam User",  # 3
     "Search Term",  # 4
     "GTR Sorting",  # 5
-    "--Exit--"
+    "--Exit--",
 ]
+
 
 class WorkshopScraper:
     def __init__(self):
-        self.choicesDict = {} # choices from console
+        self.choicesDict = {}  # choices from console
         self.tracklist = {}  # list of tracks to add to playlist
 
     def start(self):
@@ -38,7 +39,7 @@ class WorkshopScraper:
             case "Workshop ID":
                 pass
             case "Steam User":
-                pass
+                self.playlist_from_workshop_user(usr=self.choicesDict["steamUserId"], pages=int( self.choicesDict["pages"] ))
             case "Search Term":
                 pass
             case "GTR Sorting":
@@ -49,7 +50,7 @@ class WorkshopScraper:
             # case 1:
             #     self.get_zworp_random(int(self.choicesDict["amount"]))
             # case 2:
-            #     self.get_zworp_workshopid(str(self.choicesDict["idchoice"]))
+            #     self.get_zworp_workshopid(str(self.choicesDict["wsidchoice"]))
             # case 3:
             #     if "steamUserId" in self.choicesDict:
             #         self.info_from_user(str(self.choicesDict["steamUserId"]))
@@ -86,6 +87,27 @@ class WorkshopScraper:
             shuffle=self.choicesDict["shuffle"],
         )
 
+    def playlist_from_workshop_user(self, usr:str, pages=1):
+        '''Download tracks and create a playlist from a steam user. 
+        for pages enter -1 to download all
+        '''
+        steam.steamCMD_downloader(
+            self=s,
+            idlist=steam.get_workshop_ids_from_user_page(
+                self=s, 
+                user=usr,
+                pages=pages,
+            )
+        )
+
+        zl.zeeplist_constructor(
+            zl(),
+            UIDDict=zl.get_dict_from_local_tracks(zl(), path="steamcmd"),
+            filename="steamsearch",
+            roundlength=7200,
+            shuffle=True,
+        )
+
     # ----------- Helper functions ---------------------
 
     def sort_to_tracklist(self, item):
@@ -96,6 +118,4 @@ class WorkshopScraper:
 
 
 classy = WorkshopScraper()
-classy.start()
-# classy.get_gtr_popular_hashes()
-# classy.get_gtr_point_tracks()
+# classy.start()

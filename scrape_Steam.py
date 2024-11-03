@@ -6,7 +6,7 @@ import subprocess
 import json
 import os.path
 
-from Console import program_path
+from ZeeplistCurator import program_path
 from bs4 import BeautifulSoup as bs
 from genlinks import GenLinks
 
@@ -91,23 +91,26 @@ class SteamScrape:
     # NOTE: Steamcmd downloading
 
     def steamCMD_downloader(self, idlist: list[int]) -> None:
-        """download all items from a workshop ID list"""
-        dlCommand = ""
+        """download all items from a workshop ID list."""
 
-        newlist = []
-        idlen = len(idlist)
         dlCommand = ""
 
         for id in idlist:
             dlCommand += " +workshop_download_item 1440670 {0}".format(id)
 
         print(f"length dlcommand: {len(dlCommand)}")
+        local_workshop_path = "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
 
-        subprocess.run(
-            "{0}\\SteamCmd\\steamcmd +login anonymous{1} +quit".format(
-                program_path, dlCommand
+        try:
+            subprocess.run(
+                "{0}\\SteamCmd\\steamcmd +login anonymous +force_install_dir {1}{2} +quit".format(
+                    program_path, local_workshop_path, dlCommand
+                ),
+                check=True
             )
-        )
+        except subprocess.CalledProcessError as e:
+            print("an error occured: ", e)
+
 
 
         # move = 20
