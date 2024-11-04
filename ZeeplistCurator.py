@@ -1,23 +1,24 @@
 import os
-from os import path
 import io
 import shutil
 import subprocess
+import re
+import json
+import requests
+
+import questionary as q
+import sqlite3 as sq
+from bs4 import BeautifulSoup as bs
+
 from urllib import request, parse
 from pathlib import PurePath
-
-import re
 from glob import glob
 
-import json
+import genlinks
+
 
 # import csv
-import sqlite3 as sq
-
 # from pprint import pprint
-import requests
-import questionary as q
-from bs4 import BeautifulSoup as bs
 
 program_path = os.getcwd()
 
@@ -74,70 +75,108 @@ choicesDict = {
 }
 
 
-class WorkshopScraper:
+class ZeeplistCurator:
     def __init__(self):
-        self.choicesDict = {}  # choices from console
-        self.tracklist = {}  # list of tracks to add to playlist
+        self.start()
+        # self.tracklist = {}  # list of tracks to add to playlist
 
     def start(self):
-        self.choicesDict = Console().console()
+        self.console()
 
-        match self.choicesDict["functionChoice"]:
-            case "Random":
-                pass
-            case "Workshop ID":
-                pass
-            case "Steam User":
-                self.playlist_from_workshop_user(
-                    usr=self.choicesDict["steamUserId"],
-                    pages=int(self.choicesDict["pages"]),
-                )
-            case "Search Term":
-                pass
-            case "GTR Sorting":
-                pass
-            case _:
-                pass
+    def console(self):
+        appdatapath = os.path.expandvars("%Appdata%\\Zeepkist\\Playlists")
 
-            # case 1:
-            #     self.get_zworp_random(int(self.choicesDict["amount"]))
-            # case 2:
-            #     self.get_zworp_workshopid(str(self.choicesDict["wsidchoice"]))
-            # case 3:
-            #     if "steamUserId" in self.choicesDict:
-            #         self.info_from_user(str(self.choicesDict["steamUserId"]))
-            #     elif "authorId" in self.choicesDict:
-            #         self.info_from_user(str(self.choicesDict["authorId"]))
-            # case 4:
-            #     self.get_zworp_workshopid_list(
-            #         self.get_workshopid_list_from_browse(
-            #             self.get_browse_from_searchterm(
-            #                 self.choicesDict["searchTerm"], self.choicesDict["sorting"]
-            #             )
-            #         )
-            #     )
-            # case 5:
-            #     if int(self.choicesDict["gtr_choice"]) == 1:  # popular
-            #         self.get_gtr_popular_hashes()
-            #     elif int(self.choicesDict["gtr_choice"]) == 2:  # hot
-            #         self.get_gtr_hot_hashes()
-            #     elif int(self.choicesDict["gtr_choice"]) == 3:  # gtr points
-            #         self.get_gtr_point_tracks()
+        start_screen = """
+        Welcome to ZeeplistCurator. Python script written by Triton
+        Type 'ZeeplistCurator -h' for help and to learn how to use this as a CLI application.
+        
+        This project uses Steam page Web-scraping so it should work even if the GTR API is down.
+        Once the GTR API is back up I plan to implement functionality for it as well.
 
-        if len(self.tracklist) == 0:
-            if q.confirm(
-                message="Track list is empty. Try again? press n to quit."
-            ).ask():
-                self.start()
-            else:
+        Thanks to Thundernerd for creating GTR and Zworpshop.
+        Thanks to Vei/Vulpesx for creating Zeeper and inspiring me to start this project.
+
+        Place this program in your playlist folder at:
+        {0}
+        """.format(
+            appdatapath
+        )
+
+        print(start_screen)
+
+        firstchoice = ["Create Playlist", "Manage Playlists", "Options", "Exit"]
+        firstmenu = q.select(message="Startmenu", choices=firstchoice).ask()
+
+        match firstmenu:
+            case "Create Playlist":
+                playlist_menu = [
+                    "Local Tracks",
+                    "Workshop User",
+                    "Steam Search",
+                    "Pseudo Random",
+                ]
+
+                playlist_query = q.select(
+                    message="Create Playlist From:", choices=playlist_menu
+                ).ask()
+
+                if (
+                    playlist_query == "Workshop User"
+                    or playlist_query == "Steam Search"
+                ):
+                    link = GenLinks().steam_link_console()
+
+                elif playlist_query == "Local Tracks":
+                    print("not implemented yet")  # TODO:
+                elif playlist_query == "Playlists":
+                    print("not implemented yet")  # TODO:
+
+            case "Manage Playlists":
+                manage_menu = [
+                    "Combine Playlists",
+                    "Sort Playlist",
+                ]
+
+            case "Options":
+                print("option menu not implemented yet")
+                quit()
+            case "Exit":
                 quit()
 
-        ZeeplistFormat().zeeplist_constructor(
-            UIDDict=self.tracklist,
-            filename=str(self.choicesDict["name"]),
-            roundlength=int(self.choicesDict["roundlength"]),
-            shuffle=self.choicesDict["shuffle"],
-        )
+        choicesDict["name"] = q.text(message="name of playlist").ask()
+        choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
+        choicesDict["shuffle"] = q.confirm(message="shuffle?").ask()
+
+        # choicesDict["functionChoice"] = (
+        #     [i for i, x in enumerate(functionChoices) if x == function][0],
+        #     function,
+        # )
+        # pprint("choices: {}".format(choicesDict))
+
+        return choicesDict
+
+    def steam_search_console(self, playlist_query):
+        match playlist_query:
+            case "Workshop User":
+                print(
+                    """Go to the Steam Workshop. Click on a user workshop profile and enter the ID in the url.
+                    it should look like this:\n https://steamcommunity.com/id/___STEAM_ID___/myworkshopfiles/?appid=1440670"""
+                )
+                choicesDict["steamUserId"].text(message="Enter ID").ask()
+                choicesDict["pages"]
+            case "Steam Search":
+                choicesDict["sorting"] = q.select(
+                    message="Search with what sorting method?",
+                    choices=[
+                        "Relevant",
+                        "Recent",
+                        "Popular (All Time)",
+                    ],
+                    use_shortcuts=True,
+                ).ask()
+                choicesDict["searchTerm"] = q.text(message="Enter search term").ask()
+
+        return link
 
     def playlist_from_workshop_user(self, usr: str, pages=1):
         """Download tracks and create a playlist from a steam user.
@@ -162,147 +201,6 @@ class WorkshopScraper:
             shuffle=True,
         )
 
-    # ----------- Helper functions ---------------------
-
-    # def sort_to_tracklist(self, item):
-    #     # change this to use returns from other functions. call this last
-    #     "sort track json data to tracklist"
-    #     for x in item:
-    #         self.tracklist[x["fileUid"]] = [x["name"], x["fileAuthor"], x["workshopId"]]
-
-class Console:
-    def __init__(self) -> None:
-        pass
-
-    def console(self):
-        # print("----------------------------------------------------------------------")
-        # print("Welcome to ZeeplistCurator. Python script written by Triton")
-        # appdatapath = path.expandvars("%Appdata%\\Zeepkist\\Playlists")
-        # print(f"Place this program in your playlist folder at:\n {appdatapath}")
-        # print("\nThis script creates playlists and downloads Zeepkist tracks using: ")
-        # print("- Thundernerds 'Zworpshop' and 'GTR' API") #NOTE: on hold
-        # print("- Steam API, SteamCMD") #NOTE: download done
-        # print("- Steam Webscraping using BeautifulSoup4") #NOTE: done
-        # print("- Searching through local playlist and track files") #NOTE: done
-        # print("\n")
-
-        appdatapath = path.expandvars("%Appdata%\\Zeepkist\\Playlists")
-
-        start_screen = """
-        Welcome to ZeeplistCurator. Python script written by Triton
-        Type 'ZeeplistCurator -h' for help and to learn how to use this as a CLI application.
-
-        Thanks to Thundernerd for creating GTR and Zworpshop.
-        Thanks to 
-
-        Place this program in your playlist folder at:
-        {0}
-        """.format(
-            appdatapath
-        )
-        print(start_screen)
-
-        firstchoice = ["Create Playlist", "Options", "Exit"]
-
-        firstmenu = q.select(message="Startmenu", choices=firstchoice)
-
-        # print("\nstatus of services:")
-
-        playlist_menu = [
-            "Local Tracks",
-            "Workshop User",
-            "Steam Search",
-        ]
-
-        playlist_query = q.select(
-            message="Create Playlist From:", choices=playlist_menu
-        ).ask()
-
-        match playlist_query:
-            case "Workshop User":
-                print(
-                    "Go to the Steam Workshop. Click on a user workshop profile and enter the ID in the url."
-                )
-                print(
-                    "it should look like this:\n https://steamcommunity.com/id/___STEAM_ID___/myworkshopfiles/?appid=1440670"
-                )
-                choicesDict["steamUserId"].text(message="Enter ID").ask()
-                choicesDict["pages"]
-            case "Steam Search":
-                choicesDict["sorting"] = q.select(
-                    message="Search with what sorting method?",
-                    choices=[
-                        "Relevant",
-                        "Recent",
-                        "Popular (All Time)",
-                    ],
-                    use_shortcuts=True,
-                ).ask()
-                choicesDict["searchTerm"] = q.text(message="Enter search term").ask()
-
-        # functionChoices = [
-        #     "Random",  # 1
-        #     "Workshop ID",  # 2
-        #     "Steam User",  # 3
-        #     "Search Term",  # 4
-        #     "GTR Sorting",  # 5
-        #     "--Exit--"
-        # ]
-
-        # function = q.select(
-        #     "Create Playlist",
-        #     choices=functionChoices,
-        #     use_shortcuts=True,
-        # ).ask()
-
-        # if function == "Random":
-        #     # print("")
-        #     n = q.text(message="How many items to download?", default="30").ask()
-        #     choicesDict["amount"] = int(n)
-        #
-        # elif function == "Workshop ID":
-        #     print(
-        #         "for the workshop ID go to a workshop page and copy \n https://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___"
-        #     )
-        #     choicesDict["wsidchoice"] = q.text(message="Enter Workshop ID").ask()
-        #
-        # elif function == "Steam User":
-        #     if q.confirm("Do you know the author ID?").ask():
-        #         choicesDict["authorId"] = q.text(message="enter Author Id")
-        #     else:
-        #         print(
-        #             "\ncopy a workshop Id for a track from the user you want to download from here: \nhttps://steamcommunity.com/sharedfiles/filedetails/?id=___workshop_ID___"
-        #         )
-        #         choicesDict["steamUserId"] = q.text(message="enter workshop Id").ask()
-        #
-        # elif function == "Search Term":
-        #
-        # elif function == "GTR Sorting":
-        #     print("unfortunately the GTR API is down currently so this functionality is broken. \nI will release a new version once it is up again.")
-        #     # choicesDict["gtr_choice"] = q.select(
-        #     #     message="Sorting Method",
-        #     #     choices=["Popular", "Hot", "GTR Points"],
-        #     #     use_shortcuts=True,
-        #     # ).ask()
-        #     # if choicesDict["gtr_choice"] == "GTR Points":
-        #     #     n = q.text(message="how many tracks?").ask()
-        #     #     choicesDict["gtr_point_track_amount"] = int(n)
-        #
-        # elif function == "--Exit--":
-        #     print("quiting program")
-        #     quit()
-        #
-        #
-        # choicesDict["name"] = q.text(message="name of playlist").ask()
-        # choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
-        # choicesDict["shuffle"] = q.confirm(message="shuffle?").ask()
-        # choicesDict["functionChoice"] = (
-        #     [i for i, x in enumerate(functionChoices) if x == function][0],
-        #     function,
-        # )
-        #
-        # pprint("choices: {}".format(choicesDict))
-        return choicesDict
 
 class GenLinks:
     def __init__(self) -> None:
@@ -343,7 +241,7 @@ class GenLinks:
         )
 
     def steam_link_console(self) -> str:
-        """questionary console to generate a steam workshop link"""
+        """questionary console to generate a steam search workshop link"""
         sortchoice = q.select(
             message="select sorting method",
             choices=[
@@ -426,6 +324,8 @@ class GenLinks:
             link = link + "&days={}".format(days)
 
         return link
+
+
 # NOTE: Steam
 # WARN: order: base + browsesort + section + actualsort + page + day
 
@@ -503,10 +403,6 @@ class SteamScrape:
             for y in linklist:
                 idlist.append(re.compile(r"\d+").search(y).group())
         return idlist
-
-    def get_workshop_item_metadata(self, workshopId: str):
-        """get steam workshop item metadata using Steamctl or Steam API calls"""
-        pass
 
     def steamCMD_downloader(self, idlist: list[int]) -> None:
         """download all items from a workshop ID list."""
@@ -610,8 +506,10 @@ class ZeeplistFormat:
         for x in zeeplevelfile_path.keys():
             print("keys: ", x)
             items = []
-            with io.open(zeeplevelfile_path[x], "r", encoding="utf-8-sig") as csvfile:
-                items = csvfile.readline().split(",")
+            with io.open(
+                zeeplevelfile_path[x], "r", encoding="utf-8-sig"
+            ) as zeeplevel_file_open:
+                items = zeeplevel_file_open.readline().split(",")
                 try:
                     print(f"items: {items}")
                 except:
@@ -638,11 +536,6 @@ class ZeeplistFormat:
     def put_uid_dict_in_db(self, UID: dict[str, dict[str, str]]):
         con = sq.connect(program_path + "\\data.db")
         cur = con.cursor()
-        # cur.execute("CREATE TABLE track(UID, WorkshopID, Name, Author, played)")
-
-        # data = [
-        #     ("234235467-asldkfjoweifn-2382748", 2342243425, 'moretrack', 'Triton', False),
-        # ]
 
         tracks = []
 
@@ -662,9 +555,6 @@ class ZeeplistFormat:
         cur.executemany("INSERT OR IGNORE INTO tracks VALUES(?,?,?,?,?)", tracks)
         con.commit()
 
-        # cur.executemany("INSERT INTO track VALUES(?,?,?,?,?)", data)
-        # con.commit()
-
         # res = cur.execute("SELECT * FROM track")
         # print(res.fetchall())
 
@@ -678,10 +568,3 @@ class ZeeplistFormat:
             file,
             os.path.expandvars("%AppData%\\Zeepkist\\Playlists"),
         )
-
-
-#     )
-
-
-
-
