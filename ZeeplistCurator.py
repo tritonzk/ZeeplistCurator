@@ -141,6 +141,7 @@ class ZeeplistCurator:
                 except:
                     print("Download did not work. Probably because of an empty list")
 
+
             case "Manage Playlists": #TODO:
                 manage_menu = [
                     "Combine Playlists", #TODO:
