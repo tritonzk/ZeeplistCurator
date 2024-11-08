@@ -119,21 +119,26 @@ class ZeeplistCurator:
                     message="Create Playlist From:", choices=playlist_menu
                 ).ask()
 
-                if (
-                    playlist_query == "Workshop User"
-                    or playlist_query == "Steam Search"
-                ):
+                if playlist_query == "Steam Search":
                     link = GenLinks().steam_link_console()
+                    idlist = SteamScrape().get_workshop_ids_from_browse_page(link)
+
+                elif playlist_query == "Workshop User":
+                    print("working on making this better")
+                    
+                    link = GenLinks().get_workshop_link_from_username()
+                    pass
 
                 elif playlist_query == "Local Tracks":
                     print("not implemented yet")  # TODO:
                 elif playlist_query == "Playlists":
                     print("not implemented yet")  # TODO:
 
-            case "Manage Playlists":
+            case "Manage Playlists": #TODO:
                 manage_menu = [
-                    "Combine Playlists",
-                    "Sort Playlist",
+                    "Combine Playlists", #TODO:
+                    "Sort Playlist", #TODO:
+                    "Extract from Playlist", #TODO:
                 ]
 
             case "Options":
