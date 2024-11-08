@@ -24,23 +24,23 @@ program_path = os.getcwd()
 
 
 # NOTE: GTR
-gtr_base: str = "https://api.zeepkist-gtr.com/levels/"
-gtr_opt: list = [
-    "popular",
-    "hot",
-    "points?SortByPoints=true&Ascending=false&Limit={}&Offset=0",
-]
+# gtr_base: str = "https://api.zeepkist-gtr.com/levels/"
+# gtr_opt: list = [
+#     "popular",
+#     "hot",
+#     "points?SortByPoints=true&Ascending=false&Limit={}&Offset=0",
+# ]
 
 # NOTE: Zworpshop
-zworpshopGraphHql: str = "https://graphql.zworpshop.com/"
-zworp_base: str = "https://api.zworpshop.com/levels/"
-zworp_opt: dict = {
-    "random": "random?Amount={}",
-    "author": "author/{}?IncludeReplaced=false",
-    "workshop": "workshop/{}?IncludeReplaced=false",
-    "hash": "/hash/{}?IncludeReplaced=false&IncludeDeleted=false",
-}
-
+# zworpshopGraphHql: str = "https://graphql.zworpshop.com/"
+# zworp_base: str = "https://api.zworpshop.com/levels/"
+# zworp_opt: dict = {
+#     "random": "random?Amount={}",
+#     "author": "author/{}?IncludeReplaced=false",
+#     "workshop": "workshop/{}?IncludeReplaced=false",
+#     "hash": "/hash/{}?IncludeReplaced=false&IncludeDeleted=false",
+# }
+#
 
 zeeplistFormat = {
     "name": "",
@@ -53,14 +53,14 @@ zeeplistFormat = {
 
 trackFormat = {"UID": "", "WorkshopID": 0, "Name": "", "Author": "", "played": False}
 
-functionChoices = [
-    "Random",  # 1
-    "Workshop ID",  # 2
-    "Steam User",  # 3
-    "Search Term",  # 4
-    "GTR Sorting",  # 5
-    "--Exit--",
-]
+# functionChoices = [
+#     "Random",  # 1
+#     "Workshop ID",  # 2
+#     "Steam User",  # 3
+#     "Search Term",  # 4
+#     "GTR Sorting",  # 5
+#     "--Exit--",
+# ]
 
 choicesDict = {
     "amount": 0,
@@ -580,3 +580,8 @@ class ZeeplistFormat:
             file,
             os.path.expandvars("%AppData%\\Zeepkist\\Playlists"),
         )
+
+
+if __name__ == "__main__":
+    m = ZeeplistCurator()
+    m.start()
