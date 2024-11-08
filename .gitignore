@@ -10,3 +10,5 @@ dist
 *.egg-info
 *.db
 *.json
+git*
+*json
