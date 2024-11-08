@@ -9,6 +9,7 @@ import requests
 import questionary as q
 import sqlite3 as sq
 from bs4 import BeautifulSoup as bs
+import click
 
 from urllib import request, parse
 from pathlib import PurePath
@@ -119,20 +120,26 @@ class ZeeplistCurator:
                     message="Create Playlist From:", choices=playlist_menu
                 ).ask()
 
-                if playlist_query == "Steam Search":
+                if playlist_query == "Steam Search" or playlist_query == "Workshop User":
                     link = GenLinks().steam_link_console()
-                    idlist = SteamScrape().get_workshop_ids_from_browse_page(link)
 
-                elif playlist_query == "Workshop User":
-                    print("working on making this better")
-                    
-                    link = GenLinks().get_workshop_link_from_username()
-                    pass
+                    match playlist_query:
+                        case "Steam Search":
+                            idlist = SteamScrape().get_workshop_ids_from_browse_page(link)
+                        case "Workshop User":
+                            pages = int( q.text(message="how many user pages to download? default is 1 (30 items)", default="1").ask() )
+                            idlist = SteamScrape().get_workshop_ids_from_user_page(link, pages)
+
 
                 elif playlist_query == "Local Tracks":
                     print("not implemented yet")  # TODO:
                 elif playlist_query == "Playlists":
                     print("not implemented yet")  # TODO:
+
+                try:
+                    SteamScrape().steamCMD_downloader(idlist)
+                except:
+                    print("Download did not work. Probably because of an empty list")
 
             case "Manage Playlists": #TODO:
                 manage_menu = [
@@ -140,11 +147,11 @@ class ZeeplistCurator:
                     "Sort Playlist", #TODO:
                     "Extract from Playlist", #TODO:
                 ]
-
             case "Options":
                 print("option menu not implemented yet")
                 quit()
             case "Exit":
+                print("program exiting....")
                 quit()
 
         choicesDict["name"] = q.text(message="name of playlist").ask()
