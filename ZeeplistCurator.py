@@ -10,20 +10,36 @@ import questionary as q
 import sqlite3 as sq
 from bs4 import BeautifulSoup as bs
 import click
+#TODO: -(20) Implement click
 
 from urllib import request, parse
 from pathlib import PurePath
 from glob import glob
 
-# testing git
-
 # import csv
 # from pprint import pprint
 
+
+#TODO: -(3) install steamcmd if not installed yet or first opening.
+#TODO: -(2) function to move downloaded tracks to local tracks folder or delete them
+#TODO: -(20) SQL database
+#TODO: -(10) split large playlists (find good max amount)
+#TODO: -(10) better way to find authors (type their name)
+#TODO: -(~) better progress display while downloading and sorting (more information)
+#TODO: -(5) loading widget while waiting
+#TODO: -(10) fidget and ascii art for menu's
+#TODO: -() make a menu form for questionary
+
+
+
+#TODO: First todos
+#TODO: - questionary console for currently working functions
+
 program_path = os.getcwd()
-
-
+local_tracks_folder = r"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
+        
 # NOTE: GTR
+
 # gtr_base: str = "https://api.zeepkist-gtr.com/levels/"
 # gtr_opt: list = [
 #     "popular",
@@ -32,6 +48,7 @@ program_path = os.getcwd()
 # ]
 
 # NOTE: Zworpshop
+
 # zworpshopGraphHql: str = "https://graphql.zworpshop.com/"
 # zworp_base: str = "https://api.zworpshop.com/levels/"
 # zworp_opt: dict = {
@@ -53,15 +70,7 @@ zeeplistFormat = {
 
 trackFormat = {"UID": "", "WorkshopID": 0, "Name": "", "Author": "", "played": False}
 
-# functionChoices = [
-#     "Random",  # 1
-#     "Workshop ID",  # 2
-#     "Steam User",  # 3
-#     "Search Term",  # 4
-#     "GTR Sorting",  # 5
-#     "--Exit--",
-# ]
-
+#TODO: is this obsolete?
 choicesDict = {
     "amount": 0,
     "functionChoice": "",
@@ -79,11 +88,28 @@ class ZeeplistCurator:
     def __init__(self):
         self.start()
         # self.tracklist = {}  # list of tracks to add to playlist
+        
+        self.playlist_form = [
+            {'type': 'text',
+             'name': 'playlist_name',
+             'message': 'Name of the playlist'},
+            {'type': 'text',
+             'name': 'playlist_round_length',
+             'message': 'Round lenght in seconds'},
+            {'type': 'confirm',
+             'name': 'playlist_shuffle',
+             'message': 'shuffle?'}
+        ]
 
     def start(self):
         self.console()
 
+    def menu(self):
+        pass
+
+
     def console(self):
+        #TODO: make this cleaner and do all functionality
         appdatapath = os.path.expandvars("%Appdata%\\Zeepkist\\Playlists")
 
         start_screen = """
@@ -107,13 +133,15 @@ class ZeeplistCurator:
         firstchoice = ["Create Playlist", "Manage Playlists", "Options", "Exit"]
         firstmenu = q.select(message="Startmenu", choices=firstchoice).ask()
 
+        #NOTE: main menu
         match firstmenu:
             case "Create Playlist":
                 playlist_menu = [
                     "Local Tracks",
                     "Workshop User",
                     "Steam Search",
-                    "Pseudo Random",
+                    "SteamCMD Downloads"
+                    # "Pseudo Random",
                 ]
 
                 playlist_query = q.select(
@@ -129,24 +157,30 @@ class ZeeplistCurator:
                         case "Workshop User":
                             pages = int( q.text(message="how many user pages to download? default is 1 (30 items)", default="1").ask() )
                             idlist = SteamScrape().get_workshop_ids_from_user_page(link, pages)
+                    try:
+                        SteamScrape().steamCMD_downloader(idlist)
+                    except:
+                        print("Download did not work. Probably because of an empty list")
+                    ZeeplistFormat().zeeplist_constructor()
 
 
                 elif playlist_query == "Local Tracks":
-                    print("not implemented yet")  # TODO:
-                elif playlist_query == "Playlists":
-                    print("not implemented yet")  # TODO:
+                    print("not implemented yet")  #TODO:
+                    files = ZeeplistFormat().get_dict_from_local_tracks(path="local")
 
-                try:
-                    SteamScrape().steamCMD_downloader(idlist)
-                except:
-                    print("Download did not work. Probably because of an empty list")
+
+                elif playlist_query == "Playlists":
+                    print("not implemented yet")  #TODO:
+                elif playlist_query == "SteamCMD Downloads":
+                    print("not implemented yet")
+
 
 
             case "Manage Playlists": #TODO:
                 manage_menu = [
                     "Combine Playlists", #TODO:
                     "Sort Playlist", #TODO:
-                    "Extract from Playlist", #TODO:
+                    "Extract from Playlist", #TODO: author, regex, etc.
                 ]
             case "Options":
                 print("option menu not implemented yet")
@@ -155,17 +189,14 @@ class ZeeplistCurator:
                 print("program exiting....")
                 quit()
 
-        choicesDict["name"] = q.text(message="name of playlist").ask()
-        choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
-        choicesDict["shuffle"] = q.confirm(message="shuffle?").ask()
 
-        # choicesDict["functionChoice"] = (
-        #     [i for i, x in enumerate(functionChoices) if x == function][0],
-        #     function,
-        # )
-        # pprint("choices: {}".format(choicesDict))
+        playlist_info = q.prompt(playlist_form)
 
-        return choicesDict
+        # choicesDict["name"] = q.text(message="name of playlist").ask()
+        # choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
+        # choicesDict["shuffle"] = q.confirm(message="shuffle?").ask()
+
+        return choicesDict, playlist_info
 
     def steam_search_console(self, playlist_query):
         match playlist_query:
@@ -233,6 +264,7 @@ class GenLinks:
 
     def check_connection(self) -> None:
         """steam, gtr, zworpshop connection check"""
+        #TODO: make this return a list of tuples [(gtr, False), ....]
         connect = {
             "gtr": ("https://api.zeepkist-gtr.com", None),
             "zworpshop": ("https://api.zworpshop.com", None),
@@ -345,9 +377,6 @@ class GenLinks:
 class SteamScrape:
     def __init__(self) -> None:
         """get data from steam using Steam API, SteamCMD and Webscraping"""
-        self.local_tracks_folder = (
-            r"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
-        )
 
     # NOTE: Utils
 
@@ -357,12 +386,14 @@ class SteamScrape:
 
     def get_max_workshop_page(self, wsLink: str) -> int:
         """return last page number of Steam items page"""
+        #TODO: Make this work for User and Workshop pages
         soup = self.bsoup(wsLink)
         pageNumberLinks = soup.find_all("a", class_="pagelink")
         maxPage = bs.get_text(pageNumberLinks[-1])
         return int(maxPage)
 
     # NOTE: Steam Scraping
+    #TODO: Make a function for getting id's from multiple pages for both workshop and user.
     def get_workshop_ids_from_browse_page(
         self,
         link,
@@ -418,6 +449,7 @@ class SteamScrape:
 
     def steamCMD_downloader(self, idlist: list[int]) -> None:
         """download all items from a workshop ID list."""
+        #TODO: split the command with better error messaging and info per download
 
         dlCommand = ""
 
@@ -453,11 +485,44 @@ class ZeeplistFormat:
         """Class for dealing with *.zeeplevel and *.zeeplist formats"""
         self.zeepDict = {}
 
-    def zeeplist_constructor(self, UIDDict, filename, roundlength, shuffle):
+        self.zeeplistFormat = {
+            "name": "",
+            "amountOfLevels": 0,
+            "roundLength": 0,
+            "shufflePlaylist": False,
+            "UID": [],
+            "levels": [],
+        }
+
+        self.trackFormat = {"UID": "", "WorkshopID": 0, "Name": "", "Author": "", "played": False}
+
+        self.choicesDict = {
+            "amount": 0,
+            "functionChoice": "",
+            "workshopid": "",
+            "authorId": "",
+            "pages": 0,
+            "steamUserId": "",
+            "searchTerm": "",
+            "roundlength": 0.0,
+            "shuffle": False,
+        }
+
+
+    def tracklist_formatter(self, authorid:str, workshopid:int, name:str, author:str) -> dict:
+        track = self.trackFormat
+        track["UID"] = authorid
+        track["WorkshopID"] = int( workshopid )
+        track["Name"] = name
+        track["Author"] = author
+        track["played"] = False
+        return track
+
+    def zeeplist_constructor(self, UIDDict:dict, filename:str, roundlength:float, shuffle:bool):
         self.zeepDict.clear()
 
         for x in UIDDict.items():
-            self.zeepDict = zeeplistFormat
+            self.zeepDict = self.zeeplistFormat
             trackFormat = {
                 "UID": str(x[1]["authorid"]),
                 "WorkshopID": int(x[1]["workshopid"]),
@@ -499,14 +564,14 @@ class ZeeplistFormat:
             case "custom":
                 workshop_path = custom
 
-        # TODO: learn glob. This is so much faster and easy.
+        #TODO: learn glob. This is so much faster and easy.
         zeeplevels = [
             y
             for x in os.walk(workshop_path)
             for y in glob(os.path.join(x[0], "*.zeeplevel"))
         ]
 
-        # TODO: seperate lists so they don't get too large
+        #TODO: seperate lists so they don't get too large
         for x in range(len(zeeplevels)):
             workshop_item = PurePath(zeeplevels[x]).parts[-3]
             fullpath = zeeplevels[x]
@@ -514,7 +579,8 @@ class ZeeplistFormat:
 
         print("\n--------------------- Path finding done --------------------------\n")
 
-        # NOTE:  extract UID and Author from zeeplevel files to uid_dict
+        #NOTE: extract UID and Author from zeeplevel files to uid_dict
+        #TODO: change this to be to trackformat
         for x in zeeplevelfile_path.keys():
             print("keys: ", x)
             items = []
@@ -546,6 +612,7 @@ class ZeeplistFormat:
     # NOTE: ------------------- Helper scripts -------------------------------
 
     def put_uid_dict_in_db(self, UID: dict[str, dict[str, str]]):
+        #NOTE: still a WIP
         con = sq.connect(program_path + "\\data.db")
         cur = con.cursor()
 
@@ -571,8 +638,10 @@ class ZeeplistFormat:
         # print(res.fetchall())
 
     def get_dict_from_zeeplist(self, file: str) -> dict:
+        #NOTE: not a UIDdict format but a raw json
         with io.open(file, "r", encoding="utf-8-sig", newline="") as file_open:
             json_data = json.load(file_open)
+        uiddict = {}
         return json_data
 
     def move_playlist_to_local(self, file: str) -> None:
@@ -581,7 +650,13 @@ class ZeeplistFormat:
             os.path.expandvars("%AppData%\\Zeepkist\\Playlists"),
         )
 
+    def get_track_amount_from_playlist(self):
+        pass
+
+
+
 
 if __name__ == "__main__":
     m = ZeeplistCurator()
-    m.start()
+    # m.start()
+    m.menu()
