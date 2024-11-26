@@ -10,34 +10,41 @@ import questionary as q
 import sqlite3 as sq
 from bs4 import BeautifulSoup as bs
 import click
-#TODO: -(20) Implement click
+
+# TODO: -(20) Implement click
 
 from urllib import request, parse
 from pathlib import PurePath
 from glob import glob
 
 # import csv
-# from pprint import pprint
+from pprint import pprint
+
+# NOTE: first use
+# TODO: -(3) install steamcmd if not installed yet or first opening.
+
+# NOTE: new version
+# TODO: -(2) function to move downloaded tracks to local tracks folder or delete them
+# TODO: -(10) split large playlists (find good max amount)
+
+# NOTE: later versions
+# TODO: -(20) SQL database
+# TODO: -(10) better way to find authors (type their name)
+
+# NOTE: display
+# TODO: -(~) better progress display while downloading and sorting (more information)
+# TODO: -(5) loading widget while waiting
+# TODO: -(10) fidget and ascii art for menu's
 
 
-#TODO: -(3) install steamcmd if not installed yet or first opening.
-#TODO: -(2) function to move downloaded tracks to local tracks folder or delete them
-#TODO: -(20) SQL database
-#TODO: -(10) split large playlists (find good max amount)
-#TODO: -(10) better way to find authors (type their name)
-#TODO: -(~) better progress display while downloading and sorting (more information)
-#TODO: -(5) loading widget while waiting
-#TODO: -(10) fidget and ascii art for menu's
-#TODO: -() make a menu form for questionary
-
-
-
-#TODO: First todos
-#TODO: - questionary console for currently working functions
+# TODO: First todos
+# TODO: - questionary console for currently working functions
 
 program_path = os.getcwd()
-local_tracks_folder = r"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
-        
+local_tracks_folder = (
+    r"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
+)
+local_playlist_path = os.path.expandvars("%Appdata%\\Zeepkist\\Playlists")
 # NOTE: GTR
 
 # gtr_base: str = "https://api.zeepkist-gtr.com/levels/"
@@ -70,7 +77,7 @@ zeeplistFormat = {
 
 trackFormat = {"UID": "", "WorkshopID": 0, "Name": "", "Author": "", "played": False}
 
-#TODO: is this obsolete?
+# TODO: is this obsolete?
 choicesDict = {
     "amount": 0,
     "functionChoice": "",
@@ -88,17 +95,19 @@ class ZeeplistCurator:
     def __init__(self):
         self.start()
         # self.tracklist = {}  # list of tracks to add to playlist
-        
+
         self.playlist_form = [
-            {'type': 'text',
-             'name': 'playlist_name',
-             'message': 'Name of the playlist'},
-            {'type': 'text',
-             'name': 'playlist_round_length',
-             'message': 'Round lenght in seconds'},
-            {'type': 'confirm',
-             'name': 'playlist_shuffle',
-             'message': 'shuffle?'}
+            {
+                "type": "text",
+                "name": "playlist_name",
+                "message": "Name of the playlist",
+            },
+            {
+                "type": "text",
+                "name": "playlist_round_length",
+                "message": "Round lenght in seconds",
+            },
+            {"type": "confirm", "name": "playlist_shuffle", "message": "shuffle?"},
         ]
 
     def start(self):
@@ -107,10 +116,8 @@ class ZeeplistCurator:
     def menu(self):
         pass
 
-
     def console(self):
-        #TODO: make this cleaner and do all functionality
-        appdatapath = os.path.expandvars("%Appdata%\\Zeepkist\\Playlists")
+        # TODO: make this cleaner and do all functionality
 
         start_screen = """
         Welcome to ZeeplistCurator. Python script written by Triton
@@ -125,22 +132,23 @@ class ZeeplistCurator:
         Place this program in your playlist folder at:
         {0}
         """.format(
-            appdatapath
+            local_playlist_path
         )
-
         print(start_screen)
+        files = []
+
 
         firstchoice = ["Create Playlist", "Manage Playlists", "Options", "Exit"]
         firstmenu = q.select(message="Startmenu", choices=firstchoice).ask()
 
-        #NOTE: main menu
+        # NOTE: main menu
         match firstmenu:
             case "Create Playlist":
                 playlist_menu = [
                     "Local Tracks",
                     "Workshop User",
                     "Steam Search",
-                    "SteamCMD Downloads"
+                    "SteamCMD Downloads",
                     # "Pseudo Random",
                 ]
 
@@ -148,49 +156,81 @@ class ZeeplistCurator:
                     message="Create Playlist From:", choices=playlist_menu
                 ).ask()
 
-                if playlist_query == "Steam Search" or playlist_query == "Workshop User":
+                # NOTE: Steam search
+                if (
+                    playlist_query == "Steam Search"
+                    or playlist_query == "Workshop User"
+                ):
                     link = GenLinks().steam_link_console()
 
                     match playlist_query:
                         case "Steam Search":
-                            idlist = SteamScrape().get_workshop_ids_from_browse_page(link)
+                            idlist = SteamScrape().get_workshop_ids_from_browse_page(
+                                link
+                            )
                         case "Workshop User":
-                            pages = int( q.text(message="how many user pages to download? default is 1 (30 items)", default="1").ask() )
-                            idlist = SteamScrape().get_workshop_ids_from_user_page(link, pages)
+                            pages = int(
+                                q.text(
+                                    message="how many user pages to download? default is 1 (30 items), -1 is all.",
+                                    default="1",
+                                ).ask()
+                            )
+                            idlist = SteamScrape().get_workshop_ids_from_user_page(
+                                link, pages
+                            )
+
                     try:
                         SteamScrape().steamCMD_downloader(idlist)
                     except:
-                        print("Download did not work. Probably because of an empty list")
-                    ZeeplistFormat().zeeplist_constructor()
+                        print(
+                            "Download did not work. Probably because of an empty list"
+                        )
+                    # ZeeplistFormat().zeeplist_constructor()
 
-
+                # NOTE: Local tracks
                 elif playlist_query == "Local Tracks":
-                    print("not implemented yet")  #TODO:
-                    files = ZeeplistFormat().get_dict_from_local_tracks(path="local")
+                    folder = q.select(
+                        message="Choose folder with tracks",
+                        choices=["steamcmd", "local"],
+                    ).ask()
+                    track_data = ZeeplistFormat().get_dict_from_local_tracks(path=folder)
+                    ZeeplistFormat().zeeplist_constructor(UIDDict=track_data)
 
-
+                # NOTE: playlists
                 elif playlist_query == "Playlists":
-                    print("not implemented yet")  #TODO:
+                    print("not implemented yet")  # TODO:
+                    q.select(
+                        message="Get playlists from",
+                        choices=[
+                            "ZeeplistCurator default path",
+                            "local playlist folder",
+                        ]
+                    )
+                    zeeplists = ZeeplistFormat().get_zeeplists()
+                    for x in zeeplists:
+                        zeeplist_data = ZeeplistFormat().get_json_from_zeeplist(x)
+
+
                 elif playlist_query == "SteamCMD Downloads":
                     print("not implemented yet")
 
-
-
-            case "Manage Playlists": #TODO:
+            case "Manage Playlists":  # TODO:
                 manage_menu = [
-                    "Combine Playlists", #TODO:
-                    "Sort Playlist", #TODO:
-                    "Extract from Playlist", #TODO: author, regex, etc.
+                    "Combine Playlists",  # TODO:
+                    "Sort Playlist",  # TODO:
+                    "Extract from Playlist",  # TODO: author, regex, etc.
+                    "Delete playlists",  # TODO:                ]
                 ]
-            case "Options":
+            case "Options":  # TODO:
                 print("option menu not implemented yet")
+                # move and/or delete steamcmd downloads
+                # move and/or delete
                 quit()
             case "Exit":
                 print("program exiting....")
                 quit()
 
-
-        playlist_info = q.prompt(playlist_form)
+        playlist_info = q.prompt(self.playlist_form)
 
         # choicesDict["name"] = q.text(message="name of playlist").ask()
         # choicesDict["roundlength"] = q.text(message="round length in seconds").ask()
@@ -235,6 +275,7 @@ class ZeeplistCurator:
             ),
         )
 
+        # TODO: change uiddict to zeepformat
         ZeeplistFormat().zeeplist_constructor(
             UIDDict=ZeeplistFormat.get_dict_from_local_tracks(
                 ZeeplistFormat(), path="steamcmd"
@@ -264,7 +305,7 @@ class GenLinks:
 
     def check_connection(self) -> None:
         """steam, gtr, zworpshop connection check"""
-        #TODO: make this return a list of tuples [(gtr, False), ....]
+        # TODO: make this return a list of tuples [(gtr, False), ....]
         connect = {
             "gtr": ("https://api.zeepkist-gtr.com", None),
             "zworpshop": ("https://api.zworpshop.com", None),
@@ -386,14 +427,14 @@ class SteamScrape:
 
     def get_max_workshop_page(self, wsLink: str) -> int:
         """return last page number of Steam items page"""
-        #TODO: Make this work for User and Workshop pages
+        # TODO: Make this work for User and Workshop pages
         soup = self.bsoup(wsLink)
         pageNumberLinks = soup.find_all("a", class_="pagelink")
         maxPage = bs.get_text(pageNumberLinks[-1])
         return int(maxPage)
 
     # NOTE: Steam Scraping
-    #TODO: Make a function for getting id's from multiple pages for both workshop and user.
+    # TODO: Make a function for getting id's from multiple pages for both workshop and user.
     def get_workshop_ids_from_browse_page(
         self,
         link,
@@ -403,9 +444,9 @@ class SteamScrape:
         # maxpage = self.get_max_workshop_page(link)
 
         soup = self.bsoup(link)
-        linklist = []
         items_on_page = soup.find_all("a", class_="item_link", href=True)
 
+        linklist = []
         for x in items_on_page:
             linklist.append(x.get("href"))
         for y in linklist:
@@ -444,12 +485,13 @@ class SteamScrape:
             for x in items_on_page:
                 linklist.append(x.get("href"))
             for y in linklist:
-                idlist.append(re.compile(r"\d+").search(y).group())
+                sr: re.Match[str] | None = re.compile(r"\d+").search(y)
+                idlist.append(sr.group())
         return idlist
 
     def steamCMD_downloader(self, idlist: list[int]) -> None:
         """download all items from a workshop ID list."""
-        #TODO: split the command with better error messaging and info per download
+        # TODO: split the command with better error messaging and info per download
 
         dlCommand = ""
 
@@ -457,14 +499,11 @@ class SteamScrape:
             dlCommand += " +workshop_download_item 1440670 {0}".format(id)
 
         print(f"length dlcommand: {len(dlCommand)}")
-        local_workshop_path = (
-            "C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\1440670"
-        )
 
         try:
             subprocess.run(
-                "{0}\\SteamCmd\\steamcmd +login anonymous +force_install_dir {1}{2} +quit".format(
-                    program_path, local_workshop_path, dlCommand
+                "{0}\\SteamCmd\\steamcmd +login anonymous{1} +quit".format(
+                    program_path, dlCommand
                 ),
                 check=True,
             )
@@ -494,7 +533,13 @@ class ZeeplistFormat:
             "levels": [],
         }
 
-        self.trackFormat = {"UID": "", "WorkshopID": 0, "Name": "", "Author": "", "played": False}
+        self.trackFormat = {
+            "UID": "",
+            "WorkshopID": 0,
+            "Name": "",
+            "Author": "",
+            "played": False,
+        }
 
         self.choicesDict = {
             "amount": 0,
@@ -508,36 +553,47 @@ class ZeeplistFormat:
             "shuffle": False,
         }
 
+    # NOTE: Zeeplist
 
-    def tracklist_formatter(self, authorid:str, workshopid:int, name:str, author:str) -> dict:
-        track = self.trackFormat
+    def tracklist_formatter(
+        self, authorid: str, workshopid: int, name: str, author: str
+    ) -> dict:
+        """return a dict with correct track format from given info"""
+        track = self.trackFormat.copy()
         track["UID"] = authorid
-        track["WorkshopID"] = int( workshopid )
+        track["WorkshopID"] = int(workshopid)
         track["Name"] = name
         track["Author"] = author
         track["played"] = False
         return track
 
-    def zeeplist_constructor(self, UIDDict:dict, filename:str, roundlength:float, shuffle:bool):
+    def zeeplist_constructor(self, UIDDict: dict):
+        """create zeeplist from given tracks and playlistinfo"""
         self.zeepDict.clear()
 
+        filename = q.text(message="filename?").ask()
+        self.zeepDict = self.zeeplistFormat
+        levelList = []
+
         for x in UIDDict.items():
-            self.zeepDict = self.zeeplistFormat
+            # TODO: test new format
             trackFormat = {
-                "UID": str(x[1]["authorid"]),
-                "WorkshopID": int(x[1]["workshopid"]),
-                "Name": str(x[1]["name"]),
-                "Author": str(x[1]["author"]),
-                "played": False,
+                "UID": str(x[1]["UID"]),
+                "WorkshopID": int(x[1]["WorkshopID"]),
+                "Name": str(x[1]["Name"]),
+                "Author": str(x[1]["Author"]),
+                "played": x[1]["played"],
             }
-            levelList = self.zeepDict["levels"]
+
             levelList.append(trackFormat)
-            self.zeepDict["levels"] = levelList
-            self.zeepDict["name"] = filename
+
+        self.zeepDict["levels"] = levelList
+        self.zeepDict["name"] = filename
 
         self.zeepDict["amountOfLevels"] = len(UIDDict)
-        self.zeepDict["roundLength"] = float(roundlength)
-        self.zeepDict["shufflePlaylist"] = shuffle
+        self.zeepDict["roundLength"] = float(q.text(message="round length in seconds").ask())
+        self.zeepDict["shufflePlaylist"] = q.confirm(message="shuffle?").ask()
+
 
         os.chdir(program_path)
         with io.open(
@@ -551,8 +607,8 @@ class ZeeplistFormat:
         workshop_path = (
             program_path + "\\SteamCmd\\steamapps\\workshop\\content\\1440670\\"
         )
-        zeeplevelfile_path = {}
-        uid_dict = {}
+
+        track_format = {}
 
         match path:
             case "steamcmd":
@@ -564,99 +620,95 @@ class ZeeplistFormat:
             case "custom":
                 workshop_path = custom
 
-        #TODO: learn glob. This is so much faster and easy.
         zeeplevels = [
             y
             for x in os.walk(workshop_path)
             for y in glob(os.path.join(x[0], "*.zeeplevel"))
         ]
 
-        #TODO: seperate lists so they don't get too large
-        for x in range(len(zeeplevels)):
-            workshop_item = PurePath(zeeplevels[x]).parts[-3]
-            fullpath = zeeplevels[x]
-            zeeplevelfile_path[workshop_item] = fullpath
-
-        print("\n--------------------- Path finding done --------------------------\n")
-
-        #NOTE: extract UID and Author from zeeplevel files to uid_dict
-        #TODO: change this to be to trackformat
-        for x in zeeplevelfile_path.keys():
-            print("keys: ", x)
-            items = []
-            with io.open(
-                zeeplevelfile_path[x], "r", encoding="utf-8-sig"
-            ) as zeeplevel_file_open:
+        for x in zeeplevels:
+            with io.open(x, "r", encoding="utf-8-sig") as zeeplevel_file_open:
                 items = zeeplevel_file_open.readline().split(",")
-                try:
-                    print(f"items: {items}")
-                except:
-                    print("couldn't print line")
 
-            name = os.path.split(zeeplevelfile_path[x])[1].split(".")[0]
-            uid_dict[x + " " + name] = {
-                "workshopid": x,
-                "name": name,
-                "author": items[1],
-                "authorid": items[2][:-1],
-            }
-
-        for x in uid_dict.items():
-            print(x)
-
-        # print("\nfile_path", zeeplevelfile_path)
-        # print("\n___UID dict: ", uid_dict)
-        # print("\n___Workshop Id's: ", items, "\n")
-        return uid_dict
+            ppath = PurePath(x).parts
+            name = ppath[-1].split(".")[0]
+            workshopid = ppath[-3]
+            track_format[workshopid + " " + name] = self.tracklist_formatter(
+                authorid=items[2][:-1],
+                workshopid=int(workshopid),
+                name=name,
+                author=items[1],
+            )
+        return track_format
 
     # NOTE: ------------------- Helper scripts -------------------------------
+    def get_zeeplists(self):
+        zeeplists = [
+            y
+            for x in os.walk(local_playlist_path)
+            for y in glob(os.path.join(x[0], "*.zeeplist"))
+        ]
 
-    def put_uid_dict_in_db(self, UID: dict[str, dict[str, str]]):
-        #NOTE: still a WIP
-        con = sq.connect(program_path + "\\data.db")
-        cur = con.cursor()
+        return zeeplists
 
-        tracks = []
-
-        for x in UID.items():
-            data = x[1]
-            tracks.append(
-                (
-                    data["authorid"],
-                    data["workshopid"],
-                    data["name"],
-                    data["author"],
-                    "0",
-                )
-            )
-            print(f"track: {tracks}")
-
-        cur.executemany("INSERT OR IGNORE INTO tracks VALUES(?,?,?,?,?)", tracks)
-        con.commit()
-
-        # res = cur.execute("SELECT * FROM track")
-        # print(res.fetchall())
-
-    def get_dict_from_zeeplist(self, file: str) -> dict:
-        #NOTE: not a UIDdict format but a raw json
+    def get_json_from_zeeplist(self, file: str) -> dict:
+        """get raw json from zeeplist"""
         with io.open(file, "r", encoding="utf-8-sig", newline="") as file_open:
             json_data = json.load(file_open)
-        uiddict = {}
         return json_data
 
-    def move_playlist_to_local(self, file: str) -> None:
+    def move_playlist_to_local_folder(self, file: str) -> None:
+        """move file to playlist folder"""
         shutil.copy(
             file,
-            os.path.expandvars("%AppData%\\Zeepkist\\Playlists"),
+            os.path.expandvars(local_playlist_path),
         )
 
-    def get_track_amount_from_playlist(self):
-        pass
+    def get_amount_from_zeeplist(self, file: str) -> int:
+        """get amount of tracks from a zeeplist file"""
+        json = self.get_json_from_zeeplist(file)
+        return int(json["amountOfLevels"])
 
 
+class DBManager:
+    def __init__(self) -> None:
+        """class to manage data.db file"""
+        # if "data.db" not in os.listdir(program_path):
+        self.con = sq.connect(program_path + "\\data.db")
+        self.cur = self.con.cursor()
+
+    def track_to_db(self, track):
+        """add track to database"""
+        tracks = []
+        tracks.append(
+            (
+                track["UID"],
+                track["WorkshopID"],
+                track["Name"],
+                track["Author"],
+                track["played"],
+            )
+        )
+
+        print(f"track: {tracks}")
+
+        self.cur.executemany("INSERT OR IGNORE INTO tracks VALUES(?,?,?,?,?)", tracks)
+        self.con.commit()
+
+        res = self.cur.execute("SELECT * FROM track")
+        print(res.fetchall())
 
 
 if __name__ == "__main__":
-    m = ZeeplistCurator()
+    pass
+    # m = ZeeplistCurator()
     # m.start()
-    m.menu()
+    # m.menu()
+    # f = ZeeplistFormat()
+    # print(f.get_json_from_zeeplist(program_path + "\\file_testing\\jakie list.zeeplist"))
+    # pprint(
+    #     f.get_dict_from_local_tracks(
+    #         path="custom", custom=program_path + "\\file_testing"
+    #     )
+    # )
+    # f.get_dict_from_local_tracks(path="custom", custom=program_path + "\\file_testing")
