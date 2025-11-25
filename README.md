@@ -1,7 +1,8 @@
 
 # ZeepCurator
 This is a tool for the game Zeepkist on steam. 
-You can automatically create playlists from your local tracks by searching a database.
+You can automatically create playlists from Steam with webscraping, or your local tracks by searching a database.
+The program uses SteamCMD to download (local tracks filtered out).
 
 ## Current functionality
 ### From Steam
