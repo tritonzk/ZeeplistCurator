@@ -3,6 +3,7 @@ import json
 import os
 import sqlite3 as sql
 import subprocess
+import sys
 from ast import literal_eval
 from collections import namedtuple
 from datetime import datetime
@@ -41,7 +42,7 @@ elif ENVIRONMENT == "nt":  # windows #TODO: test on windows
     )
 else:
     q.press_any_key_to_continue("environment unknown. quitting").ask()
-    quit()
+    sys.exit(0)
 
 
 # pprint(f"appdata folder: {ZEEPKIST_APPDATA_FOLDER}")
@@ -164,7 +165,7 @@ class ConfigManager:
 
         if changed:
             if q.confirm("config changed. restart now? ").ask():
-                quit()
+                sys.exit(0)
 
     def change(self, input: str, change_to):
         self.config[input] = change_to
@@ -282,7 +283,7 @@ class LocalDB:
         """get a list of tracks from an author (based on string)"""
         self.con.row_factory = self.namedtuple_factory
         author_list = self.con.execute(
-            "SELECT * FROM levels WHERE LOWER(track_author) '%' || LOWER(?) || '%' ORDER BY date_modified DESC",
+            "SELECT * FROM levels WHERE LOWER(track_author) LIKE '%' || LOWER(?) || '%' ORDER BY date_modified DESC",
             (author,),
         ).fetchall()
         return [author_list]
@@ -443,10 +444,23 @@ class PlaylistManager:
                 level["Author"] = level_row.track_author
                 level["played"] = False
                 levels.append(level)
-                print("added {track}".format(track=level["Name"]))
+                # print("added {track}".format(track=level["Name"]))
         pl = ZEEPLIST_FORMAT.copy()
         pl["amountOfLevels"] = len(levels)
         pl["levels"] = levels
+
+        q.print(
+            ("-" * 20)
+            + " {} tracks found ".format(pl["amountOfLevels"])
+            + ("-" * (30 - len(" {} tracks found "))),
+            style="fg:ansired",
+        )
+        readable_level_list = []
+        for level in levels:
+            readable_level_list.append(level["Author"] + " - " + level["Name"])
+        print(readable_level_list)
+        q.print(("-" * 50), style="fg:ansired")
+
         return pl
 
     def create_and_copy_playlist(
@@ -553,7 +567,7 @@ class SteamScraper:
                     re.compile(r"\d+").search(y).group()
                 )  # BUG: str|None breaks this sometimes.
 
-            print(f"\nPage {x} idlist: {idlist}\n")
+        # print(f"idlist:\n {idlist}\n")
         return idlist
 
     def get_max_page(self, link):
@@ -680,8 +694,7 @@ class SteamCMDManager:
                     filtered_idlist.append(x)
                 elif (
                     len(workshop_query[0]) > 0
-                ):  # NOTE: if query returns row objects [[Row(), Row()]] add to removed
-                    print(f"{x} removed because it exists locally")
+                ):  # if query returns row objects [[Row(), Row()]] add to removed
                     removed.append(x)
                 else:
                     q.print(f"problem with dl workshoplist item {x}")
@@ -986,24 +999,40 @@ class Console:
                 match playlist_choice:
                     case "[local] Name":
                         name_query = q.text(message="Search by name: ").ask()
-                        name_search = self.db.query_data_name(name_query)
                         formatted_name_search = self.pl.format_playlistdict_from_levels(
-                            name_search
+                            self.db.query_data_name(name_query)
                         )
-                        self.pl.create_and_copy_playlist("", formatted_name_search)
-                        q.press_any_key_to_continue().ask()
-                        self.start()
+
+                        print(
+                            f"found: {formatted_name_search["amountOfLevels"]} tracks"
+                        )
+                        if q.confirm("continue to create playlist? ").ask():
+                            self.pl.create_and_copy_playlist("", formatted_name_search)
+                            q.press_any_key_to_continue().ask()
+                            self.start()
+                        else:
+                            q.print("---- quit out of menu ----")
+                            self.start()
                     case "[local] Author (fuzzy)":
                         author_query = q.text(
                             message="Search by author (fuzzy): "
                         ).ask()
-                        fuzzy_search = self.db.query_data_author_fuzzy(author_query)
                         formatted_fuzzy = self.pl.format_playlistdict_from_levels(
-                            fuzzy_search
+                            self.db.query_data_author_fuzzy(author_query)
                         )
-                        self.pl.create_and_copy_playlist("", formatted_fuzzy)
-                        q.press_any_key_to_continue().ask()
-                        self.start()
+
+                        q.print(
+                            "found: {0} tracks".format(
+                                formatted_fuzzy["amountOfLevels"]
+                            )
+                        )
+                        if q.confirm("continue to create playlist? ").ask():
+                            self.pl.create_and_copy_playlist("", formatted_fuzzy)
+                            q.press_any_key_to_continue().ask()
+                            self.start()
+                        else:
+                            q.print("---- quit out of menu ----")
+                            self.start()
                     case "[local] Author (strict)":
                         author_query = q.text(
                             message="Search by author (strict): "
@@ -1012,9 +1041,17 @@ class Console:
                         formatted_author = self.pl.format_playlistdict_from_levels(
                             author_search
                         )
-                        self.pl.create_and_copy_playlist("", formatted_author)
-                        q.press_any_key_to_continue().ask()
-                        self.start()
+                        print(f"found: {formatted_author["amountOfLevels"]} tracks")
+                        confirm_create = q.confirm(
+                            "continue to create playlist? "
+                        ).ask()
+                        if confirm_create:
+                            self.pl.create_and_copy_playlist("", formatted_author)
+                            q.press_any_key_to_continue().ask()
+                            self.start()
+                        else:
+                            q.print("---- quit out of menu ----")
+                            self.start()
                     case "[steam] Search":
                         ss = SteamScraper()
                         cmd = SteamCMDManager(STEAM_WORKSHOP_FOLDER)
@@ -1165,8 +1202,7 @@ class Console:
                     case "Back":
                         self.start()
             case "Options":
-                q.print("Current settings in config.json:", style="fg:ansiyellow")
-                q.print("-" * 50, style="fg:ansired")
+                q.print("-" * 20 + "Current settings" + "-" * 20, style="fg:ansired")
                 pprint(CONFIG_DATA)
                 q.print("-" * 50, style="fg:ansired")
                 options_choices = q.select(
@@ -1184,7 +1220,7 @@ class Console:
                             "Config Changed. Restart program now to finalize changes."
                         )
                         if q.confirm("Restart now? ").ask():
-                            quit()
+                            sys.exit(0)
                         else:
                             self.start()
                     case "Change Verbose Database Update":
@@ -1194,7 +1230,7 @@ class Console:
                             "Config Changed. Restart program now to finalize changes."
                         )
                         if q.confirm("Restart now? ").ask():
-                            quit()
+                            sys.exit(0)
                         else:
                             self.start()
                     case "Change Steam Max Page":
@@ -1204,7 +1240,7 @@ class Console:
                             "Config Changed. Restart program now to finalize changes."
                         )
                         if q.confirm("Restart now? ").ask():
-                            quit()
+                            sys.exit(0)
                         else:
                             self.start()
                     case "Back":
@@ -1214,7 +1250,7 @@ class Console:
                 q.press_any_key_to_continue().ask()
                 self.start()
             case "Exit":
-                quit()
+                sys.exit(0)
 
 
 console = Console()
