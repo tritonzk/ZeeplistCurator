@@ -1,4 +1,15 @@
 _*
 *.zeeplist
 README.md
+key.txt
+.venv
+SteamCmd
+.gitignore
+build
+dist
+*.egg-info
+*.db
 *.json
+git*
+*json
+file_testing*

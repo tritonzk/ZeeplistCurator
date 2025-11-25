@@ -1,14 +1,25 @@
 
-# ZeepkistRandomizer
-In an effort to create a game-mode for Zeepkist similar to RMC (random map challenge) from Trackmania and to make creating playlists less cumbersome, I created this Python script. The script searches the steam workshop using BeautifulSoup4 and Thundernerds Zworpshop API.
+# ZeepCurator
+This is a tool for the game Zeepkist on steam. 
+You can automatically create playlists from Steam with webscraping, or your local tracks by searching a database.
+The program uses SteamCMD to download (local tracks filtered out).
 
-## How to install/use
-Download the release version on the side. Place the *.exe file in your playlist folder at `%Appdata%\Zeepkist\Playlists`.
-Placing it in its own folder in your playlist folder works and I prefer that to keep the playlists separate.
+## Current functionality
+### From Steam
+- Search steam workshop / create playlist (full search functionality)
+- Download/create_playlist from Author pages
+- Download/create_playlist from Workshop ID
 
-## future version?
-- create standalone *.exe with interface
-- make a separate Bepinx RMC mod
-    - timer
-    - customizable rules
-    - point counter
+### From Local Tracks
+- Search Track names
+- Search Author names (strict = only author, fuzzy = author + publisher + collaborators)
+
+## Future functionality
+- Manage local playlists (sort, split, manual remove/add, etc.)
+- GUI for thumbnail browsing
+- Better Search options (combine filters)
+- Dynamic filters
+- Auto updating playlists
+- GTR times ? (depends on when the API gets re-opened)
+- Track rating and tags/notes
+- Track played history
