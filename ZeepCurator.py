@@ -3,13 +3,13 @@ import json
 import os
 import sqlite3 as sql
 import subprocess
-import sys
 from ast import literal_eval
 from collections import namedtuple
 from datetime import datetime
 from io import open
 from pathlib import Path, PurePath
 from pprint import pprint
+from sys import exit
 from urllib import parse, request
 
 # import click  # TODO: maybe use this? Able to run the app with "app --example" tags in terminal
@@ -18,6 +18,8 @@ import questionary as q
 import regex as re
 import requests
 from bs4 import BeautifulSoup as bs
+
+import menudict
 
 # NOTE: system info
 ENVIRONMENT = os.name
@@ -42,8 +44,7 @@ elif ENVIRONMENT == "nt":  # windows #TODO: test on windows
     )
 else:
     q.press_any_key_to_continue("environment unknown. quitting").ask()
-    sys.exit(0)
-
+    exit()
 
 # pprint(f"appdata folder: {ZEEPKIST_APPDATA_FOLDER}")
 # pprint(f"workshop folder: {STEAM_WORKSHOP_FOLDER}")
@@ -69,7 +70,7 @@ ZEEPLEVEL_FORMAT = {
 ZEEPLIST_FORMAT = {
     "name": "",
     "amountOfLevels": "",
-    "roundLength": 480,
+    "roundLength": 480.0,
     "shufflePlaylist": False,
     "UID": [],
     "levels": [],
@@ -95,7 +96,7 @@ CONFIG_FORMAT = {
         "default_sort": "date_modified",
         "sort_direction": "DESC",
     },
-    "steam_scraper": {"max_page": 5},
+    "steam_scraper": {"max_page": 99},
     "update_db": False,
     "update_verbose": True,
     "custom_appdata_folder": "",
@@ -142,7 +143,6 @@ class ConfigManager:
     def __init__(self):
         with io.open(CONFIG_FILE, "r") as f:
             self.config = json.loads(f.read())
-
         self.custom_folder_paths()
 
     def custom_folder_paths(self):
@@ -154,27 +154,34 @@ class ConfigManager:
                 "find where your playlists and level-editor levels are stored and enter 'Zeepkist' folder below"
             )
             self.change("custom_appdata_folder", q.text("enter path: ").ask())
+            changed = True
 
         if not os.path.exists(STEAM_WORKSHOP_FOLDER):
             q.print("-" * 50, style="fg:ansired")
             q.print("error: could not find your Steam's Zeepkist Workshop folder")
             q.print(
-                "find where your locally downloaded tracks are stored and enter the '1440670' folder below"
+                "find where your locally downloaded tracks are stored and enter the full path for the '1440670' folder below"
             )
             self.change("custom_workshop_folder", q.text("enter path: ").ask())
+            changed = True
 
         if changed:
-            if q.confirm("config changed. restart now? ").ask():
-                sys.exit(0)
+            q.print("Config changed. Restarting the program now. ")
+            q.press_any_key_to_continue()
+            exit()
 
     def change(self, input: str, change_to):
         self.config[input] = change_to
         with io.open(CONFIG_FILE, "w") as f:
             json.dump(self.config, f, indent=4)
+        q.print(f"changed {input} to {change_to}")
 
     def reset_config(self):
         with io.open(CONFIG_FILE, "w") as f:
             json.dump(CONFIG_FORMAT, f, indent=4)
+        q.print("Config reset to default. Restarting the program now. ")
+        q.press_any_key_to_continue()
+        exit()
 
     def change_playlist_defaults(self):
         shuffle_choice = q.confirm("Shuffle? ").ask()
@@ -184,20 +191,26 @@ class ConfigManager:
         with io.open(CONFIG_FILE, "w") as f:
             json.dump(self.config, f, indent=4)
 
+        shuffle_choice = ["false", "true"][shuffle_choice]
+
+        q.print(
+            f"changed playlist defaults to {round( time_choice )} second rounds with shuffle = {shuffle_choice}"
+        )
+
     def change_update_verbose(self):
         verbose = q.confirm("Show every track and playlist when updating? ").ask()
-        if verbose:
-            self.change("update_verbose", True)
-        else:
-            self.change("update_verbose", False)
+        self.change("update_verbose", verbose)
         with io.open(CONFIG_FILE, "w") as f:
             json.dump(self.config, f, indent=4)
+        verbose = ["false", "true"][verbose]
+        q.print(f"Changed verbose database updating to {verbose}.")
 
     def change_steam_max_page(self):
         max_page = q.text("Change max page to search with steam").ask()
-        self.config["steam_scraper"]["max_page"] = max_page
+        self.config["steam_scraper"]["max_page"] = int(max_page)
         with io.open(CONFIG_FILE, "w") as f:
             json.dump(self.config, f, indent=4)
+        q.print(f"changed steam max page to {max_page}")
 
 
 # NOTE: run the configmanager once to catch if anything is missing
@@ -230,23 +243,23 @@ class LocalDB:
         )
 
         # NOTE: create playlists table if none exists
-        self.cur.execute(
-            """
-        CREATE TABLE IF NOT EXISTS playlists (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        path TEXT UNIQUE,
-        name TEXT,
-        levels TEXT,
-        data TEXT,
-        level_amount INT
-        )
-        """
-        )
+        # TODO: work in progress
+
+        # self.cur.execute(
+        #     """
+        # CREATE TABLE IF NOT EXISTS playlists (
+        # id INTEGER PRIMARY KEY AUTOINCREMENT,
+        # path TEXT UNIQUE,
+        # name TEXT,
+        # levels TEXT,
+        # data TEXT,
+        # """
+        # )
 
         global first_start
         if CONFIG_DATA["update_db"] and first_start:
-            self.update_zeeplist_table()
             self.update_level_table()
+            # self.update_zeeplist_table()
             first_start = False
 
     def namedtuple_factory(self, cursor, row):
@@ -255,40 +268,92 @@ class LocalDB:
         Row = namedtuple("Row", fields)
         return Row(*row)
 
-    def query_data_name(self, name: str):
+    def query_sort(self) -> list:
+        """Sorting method of the sqlite queries. returns [method, direction]"""
+        sort_method_options = {
+            "Level name": "track_name",
+            "Date modified": "date_modified",
+            "Author name": "track_author",
+        }
+        sort_order_options = {"Ascending": "ASC", "Descending": "DESC"}
+
+        sortbool = q.confirm(
+            "Sort by default? current sorting = {0}".format(
+                CONFIG_DATA["playlist_defaults"]["default_sort"]
+                + " "
+                + CONFIG_DATA["playlist_defaults"]["sort_direction"]
+            )
+        ).ask()
+
+        if not sortbool:
+            sorting_method = q.select(
+                message="Sorting Method",
+                choices=[
+                    q.Choice(title=k, value=v) for k, v in sort_method_options.items()
+                ],
+            ).ask()
+            sorting_order = q.select(
+                message="Sorting Order?",
+                choices=[
+                    q.Choice(title=k, value=v) for k, v in sort_order_options.items()
+                ],
+            ).ask()
+
+            return [sorting_method, sorting_order]
+        else:
+            return [
+                CONFIG_DATA["playlist_defaults"]["default_sort"],
+                CONFIG_DATA["playlist_defaults"]["sort_direction"],
+            ]
+
+    def query_data_name(self, name: str, sorting):
         """get a list of tracks with a regex name"""
         self.con.row_factory = self.namedtuple_factory
+        sort = sorting
         name_tracks = self.con.execute(
-            "SELECT * FROM levels WHERE LOWER(track_name) LIKE '%' || LOWER(?) || '%' ORDER BY date_modified DESC",
+            "SELECT * FROM levels WHERE LOWER(track_name) LIKE '%' || LOWER(?) || '%' ORDER BY {method} {order}".format(
+                method=sort[0], order=sort[1]
+            ),
             (name,),
         ).fetchall()
         return [name_tracks]
 
-    def query_data_workshopid(self, idlist: list[int]) -> list[list]:
-        """get a list of ids from the database and put the data for them in a playlist"""
+    def query_data_workshopid(self, idlist: list[int], sorting) -> list[list]:
+        """get a list of ids from the database and put the data for them in a list"""
         self.con.row_factory = self.namedtuple_factory
+        # sort = self.query_sort()
+        sort = sorting
+        if sort == "":
+            sort = ["date_modified", "DESC"]
         workshop_list = []
+
         for id in idlist:
             workshop_list.append(
                 self.con.execute(
                     """
-                    SELECT * FROM levels WHERE workshop_id = ? ORDER BY date_modified DESC
-                """,
+                    SELECT * FROM levels WHERE workshop_id = ? ORDER BY {method} {order}
+                """.format(
+                        method=sort[0], order=sort[1]
+                    ),
                     (id,),
                 ).fetchall()
             )
         return workshop_list
 
-    def query_data_author(self, author) -> list[list]:
+    def query_data_author(self, author, sorting) -> list[list]:
         """get a list of tracks from an author (based on string)"""
         self.con.row_factory = self.namedtuple_factory
+        sort = sorting
         author_list = self.con.execute(
-            "SELECT * FROM levels WHERE LOWER(track_author) LIKE '%' || LOWER(?) || '%' ORDER BY date_modified DESC",
+            "SELECT * FROM levels WHERE LOWER(track_author) LIKE '%' || LOWER(?) || '%' ORDER BY {method} {order}".format(
+                method=sort[0], order=sort[1]
+            ),
             (author,),
         ).fetchall()
         return [author_list]
 
-    def query_data_author_fuzzy(self, author) -> list[list]:
+    def query_data_author_fuzzy(self, author, sorting) -> list[list]:
+        # WARNING: work in progress
         """get a list of tracks from an author, case-insensitive, check collaboration, overwritten, author steamids.
         - check most common steam id related to author (track_author > workshop_author > collaborator)
         - once a steam id is related do another search for that steamid
@@ -296,67 +361,51 @@ class LocalDB:
         - integrate with steamcmd / steamscraper to download missing tracks from this author (get steamid first and then scrape)
         """
         self.con.row_factory = self.namedtuple_factory
+        sort = sorting
         results = self.con.execute(
             """
             SELECT *
             FROM levels
             WHERE LOWER(track_author) LIKE '%' || LOWER(?) || '%'
                OR LOWER(track_collaborators) LIKE '%' || LOWER(?) || '%'
-            ORDER BY date_modified DESC
-        """,
-            (author, author),
+            ORDER BY {method} {order}
+            """.format(
+                method=sort[0], order=sort[0]
+            ),
+            (author,),
         ).fetchall()
-
+        # data.pop("levels")
         return [results]
 
-    def query_data_fuzzy(self, author):
-        """get a list of tracks based on a searchterm, could be author, trackname, case-insensitive, overwritten names, collaborators"""
-        pass
-
-    def query_data_recent_search(self):
-        """get a list of recently modified tracks (aka recently downloaded)"""
-        pass
-
-    def update_zeeplist_table(self):
-        playlists = list(
-            Path(ZEEPKIST_APPDATA_FOLDER + "/Playlists").rglob("*.zeeplist")
-        )
-        # pprint(playlists)
-
-        for x in playlists:
-            plist = ZeeplistFormat(x.as_posix())
-            if CONFIG_DATA["update_verbose"]:
-                print(
-                    f"[{plist.format}] : "
-                    + plist.playlist.parent.name
-                    + "/"
-                    + plist.name
-                )
-            data = plist.data.copy()
-            data.pop("levels")
-
-            try:
-                self.con.execute(
-                    """INSERT OR REPLACE INTO playlists ( path, name, levels, data, level_amount ) values ( ?, ?, ?, ?, ?) """,
-                    (
-                        x.as_uri(),
-                        plist.name,
-                        str(plist.levels),
-                        str(data),
-                        plist.amount,
-                    ),
-                )
-            except sql.IntegrityError:
-                print(f"sql_integrity_error on {x}")
-                pass
-
-        self.con.commit()
+    # WARNING: not working
+    # def update_zeeplist_table(self):
+    #
+    #     try:
+    #         self.con.execute(
+    #             """INSERT OR REPLACE INTO playlists ( path, name, levels, data, level_amount ) values ( ?, ?, ?, ?, ?) """,
+    #             (
+    #                 x.as_uri(),
+    #                 plist.name,
+    #                 str(plist.levels),
+    #                 str(data),
+    #                 plist.amount,
+    #             ),
+    #         )
+    #     except sql.IntegrityError:
+    #         print(f"sql_integrity_error on {x}")
+    #         pass
+    #
+    #     self.con.commit()
 
     def update_level_table(self):
+        """update level database in data.db"""
+        # TODO: only update changed tracks. Better info
         tracks = list(Path(STEAM_WORKSHOP_FOLDER).rglob("*.zeeplevel"))
 
         for x in tracks:
-            f = json.loads(open(x.parent.parent.as_posix() + "/metadata.json").read())
+            f = json.loads(
+                open(x.parent.parent.as_posix() + "/metadata.json").read()
+            )  # TODO: check if exist.
             if CONFIG_DATA["update_verbose"]:
                 print(
                     "updating: {track}".format(
@@ -391,17 +440,17 @@ class LocalDB:
                 self.con.execute(
                     """INSERT OR REPLACE INTO levels ( path, workshop_id, workshop_name, workshop_author, track_author, track_author_stmid, track_collaborators, track_name, track_data, date_modified, sys_date_modified ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) """,
                     (
-                        x.as_uri(),
-                        PurePath(x).parts[-3],
-                        "N/A",
-                        workshop_author,
-                        track_data["author"]["name"],
-                        track_data["author"]["StmID"],
-                        track_data["author"]["collaborators"],
-                        PurePath(x).parts[-2],
-                        str(track_data),
-                        str(datemodified),
-                        sys_last_modified,
+                        x.as_uri(),  # path
+                        PurePath(x).parts[-3],  # workshop_id
+                        "N/A",  # workshop_name #TODO: find a way to get the workshop name
+                        workshop_author,  # workshop_author
+                        track_data["author"]["name"],  # track_author
+                        track_data["author"]["StmID"],  # track_author_stmid
+                        track_data["author"]["collaborators"],  # track_collaborators
+                        PurePath(x).parts[-2],  # track_name
+                        str(track_data),  # track_data
+                        str(datemodified),  # date_modified
+                        sys_last_modified,  # sys_date_modified
                     ),
                 )
             except sql.IntegrityError:
@@ -419,17 +468,25 @@ class PlaylistManager:
     def __init__(self) -> None:
         """class to manage playlist files. create, manage, change zeeplists"""
         self.con = LocalDB().con
+        self.playlist_backup_folder_name = "generated_lists"
+        if not Path.exists(Path(PROGRAM_PATH + "/" + self.playlist_backup_folder_name)):
+            os.mkdir(
+                "{cwd}/{pld}".format(
+                    cwd=PROGRAM_PATH, pld=self.playlist_backup_folder_name
+                )
+            )
 
-    def merge_playlists(self, p1, p2):  # TODO:
+    # TODO: make this work
+    def merge_playlists(self, p1, p2):
         """merge two playlists, search playlists twice, set time or choose default time, set shuffle or default"""
         pass
 
     def format_playlistdict_from_levels(self, datalist) -> dict:
         """put list of items from data.db queries into zeeplist format
         takes data in Row format and outputs playlist dict"""
-
+        errors = []
         levels = []
-        for i, wsitem in enumerate(datalist):  # each workshop nr has their own list
+        for _, wsitem in enumerate(datalist):  # each workshop nr has their own list
             for x in range(0, len(wsitem)):  # for each level in a workshop item
                 level = ZEEPLIST_LEVEL_FORMAT.copy()
                 level_row = wsitem[x]
@@ -437,7 +494,12 @@ class PlaylistManager:
                     level_row.track_data
                 )  # WARNING: this could run code if the database is changed. find some other way to do str -> dict
                 level["UID"] = track_data["level"]["UID"]
-                level["WorkshopID"] = int(level_row.workshop_id)
+                try:
+                    level["WorkshopID"] = int(level_row.workshop_id)
+                except ValueError:
+                    errors.append(
+                        f"path: {level_row.path}. track: {level_row.track_author} - {level_row.track_name}. [[value={level_row.workshop_id}]]"
+                    )
                 level["Name"] = level_row.track_name
                 level["Collaborators"] = level_row.track_collaborators
                 level["OverrideAuthorName"] = track_data["author"]["nameOverride"]
@@ -450,17 +512,18 @@ class PlaylistManager:
         pl["levels"] = levels
 
         q.print(
-            ("-" * 20)
-            + " {} tracks found ".format(pl["amountOfLevels"])
-            + ("-" * (30 - len(" {} tracks found "))),
+            ("-" * 20) + " {} tracks found ".format(pl["amountOfLevels"]) + ("-" * 20),
             style="fg:ansired",
         )
         readable_level_list = []
         for level in levels:
             readable_level_list.append(level["Author"] + " - " + level["Name"])
         print(readable_level_list)
-        q.print(("-" * 50), style="fg:ansired")
-
+        q.print((("-" * 40) + str(len(levels)) + " levels found" + ("-" * 30)), style="fg:ansired")
+        if errors:
+            q.print("Errors on these tracks:")
+            print(errors)
+            q.print("-" * 70, style="fg:ansired")
         return pl
 
     def create_and_copy_playlist(
@@ -478,14 +541,23 @@ class PlaylistManager:
         if name == "":
             name = q.text("name your track: ").ask()
 
-        new_list = open("{name}.zeeplist".format(name=name), "w", encoding="utf-8-sig")
+        new_list = open(
+            "{pld}/{name}.zeeplist".format(
+                name=name, pld=self.playlist_backup_folder_name
+            ),
+            "w",
+            encoding="utf-8-sig",
+        )
         json.dump(pldict, new_list, indent=4)
         new_list.close()
 
         safe = ZEEPKIST_APPDATA_FOLDER.replace(" ", r"\ ")
         subprocess.run(
-            "cp {cwd}/{name}.zeeplist {zlstorage}".format(
-                cwd=PROGRAM_PATH, name=name, zlstorage=safe + r"/Playlists/"
+            "cp {cwd}/{pld}/{name}.zeeplist {zlstorage}".format(
+                cwd=PROGRAM_PATH,
+                pld=self.playlist_backup_folder_name,
+                name=name,
+                zlstorage=safe + r"/Playlists/",
             ),
             shell=True,
         )
@@ -519,17 +591,15 @@ class SteamScraper:
         self.steam_search = "https://steamcommunity.com/workshop/browse/?appid=1440670&searchtext={}&browsesort=textsearch&section=readytouseitems"
         self.daylist = [1, 7, 30, 90, 180, 365, -1]  # not used
         self.author_link = (
-            "https://steamcommunity.com/id/{0}/myworkshopfiles/?numperpage=30"
+            "https://steamcommunity.com/profiles/{0}/myworkshopfiles/?numperpage=30"
         )
-
-    def start(self) -> list[int]:
-        return self.get_workshop_ids_from_browse_page(self.steam_link_console())
 
     def bsoup(self, link) -> bs:
         """return a bs4 object from given link"""
         return bs(requests.get(link).text, "html.parser")
 
     def get_workshop_ids_from_author_id(self, id):
+        # TODO: make this work with links (isolate the id from url)
         link = self.author_link.format(id)
         try:
             request.urlopen(link)
@@ -550,8 +620,8 @@ class SteamScraper:
         self,
         link,
     ) -> list[int]:
-        """return list of 30 workshop ids per page from the given browsing page using bs4."""
-        # TODO: be able choose a limit lower than 30
+        """return list of all workshop ids from the given browsing page using bs4."""
+        # TODO: be able choose a page limit
         idlist = []
         max_page = int(self.get_max_page(link))
         max_page_config = int(CONFIG_DATA["steam_scraper"]["max_page"])
@@ -563,16 +633,18 @@ class SteamScraper:
             for i in items_on_page:
                 linklist.append(i.get("href"))
             for y in linklist:
-                idlist.append(
+                id = (
                     re.compile(r"\d+").search(y).group()
-                )  # BUG: str|None breaks this sometimes.
-
-        # print(f"idlist:\n {idlist}\n")
+                )  # BUG: breaks if none are found (str|None)
+                idlist.append(id)
         return idlist
 
     def get_max_page(self, link):
         soup = self.bsoup(link)
         pages = soup.find("div", class_="workshopBrowsePagingControls")
+        if pages == None:
+            print("pages is None")
+
         pages_links = pages.find_all("a", class_="pagelink")
         pages_tags = []
         for x in pages_links:
@@ -663,10 +735,13 @@ class SteamScraper:
 
 
 class SteamCMDManager:
-    def __init__(self, install_dir: str | None) -> None:
+    def __init__(self, install_dir: str | None = None) -> None:
         """manager for steamcmd. downloading workshop items"""
         if install_dir == None:
-            self.force_install_dir = STEAM_WORKSHOP_FOLDER
+            # NOTE: test this. make sure the path is correct
+            self.force_install_dir = Path(
+                STEAM_WORKSHOP_FOLDER
+            ).parent.parent.parent.parent
         else:
             self.force_install_dir = install_dir
 
@@ -679,44 +754,41 @@ class SteamCMDManager:
     def dl_workshoplist_to_folder(self, idlist: list[int]):
         dlCommand = ""
         if len(idlist) == 0:
-            q.print("the workshop list is empty.")
+            q.print("The workshop list given to steamcmd is empty.")
             return False
         else:
-
             # NOTE: filter out local tracks
             filtered_idlist = []
             removed = []
             for x in idlist:
-                workshop_query = LocalDB().query_data_workshopid([x])
-                if workshop_query == [
-                    []
-                ]:  # NOTE: if query returns nothing add to filtered
+                workshop_query = LocalDB().query_data_workshopid([x], "")
+                # NOTE: if query returns nothing add to filtered
+                if workshop_query == [[]]:
                     filtered_idlist.append(x)
                 elif (
                     len(workshop_query[0]) > 0
                 ):  # if query returns row objects [[Row(), Row()]] add to removed
                     removed.append(x)
                 else:
-                    q.print(f"problem with dl workshoplist item {x}")
+                    q.print(f"Problem with query for workshop item {x}")
 
             q.print("-" * 50, style="fg:ansired")
             q.print(
-                f"found {len(idlist)} tracks, removed {len(removed)} local tracks. Leaving {len(filtered_idlist)} to download"
+                f"Found {len(idlist)} tracks, removed {len(removed)} local tracks. Leaving {len(filtered_idlist)} to download"
             )
             q.print("removed: ", style="bold")
             print(removed)
             q.print("downloading: ", style="bold")
             print(filtered_idlist)
             q.print("-" * 50, style="fg:ansired")
+            q.print(f"Estimated download time of {len(filtered_idlist)*3} seconds")
             q.print(
-                f"with an estimated download time of 3s per track your download time will be {len(filtered_idlist)*3} seconds"
+                "Keep in mind that workshop items can have multiple tracks, this will increase the download time"
             )
-            q.print(
-                "keep in mind that workshop items can have multiple tracks, this will increase the download time"
-            )
-            go_download = q.confirm("Continue downloading? ").ask()
-            if not go_download:
-                return False
+            if len(filtered_idlist) != 0:
+                go_download = q.confirm("Continue downloading? ").ask()
+                if not go_download:
+                    return False
 
             for id in filtered_idlist:
                 dlCommand += "+workshop_download_item 1440670 {0} ".format(id)
@@ -731,12 +803,12 @@ class SteamCMDManager:
                     check=True,
                     shell=True,
                 )
-                q.print("steam download completed.", style="bold")
+                q.print("Steam download completed.", style="bold")
                 print(filtered_idlist)
                 return True
 
             except subprocess.CalledProcessError as e:
-                print("an error occured: ", e)
+                print("An error occured with subprocess: ", e)
 
             return True
 
@@ -808,7 +880,7 @@ class ZeeptrackFormat:
         else:
             print(six_bytes_sig[0])
             print(
-                "error with zeeptrackformat class on {track}".format(track=self.track)
+                "Error with zeeptrackformat class on {track}".format(track=self.track)
             )
             self.version = 0
             self.items_v2 = []
@@ -863,394 +935,240 @@ class Console:
     def __init__(self) -> None:
         """CLI console class to manage the program"""
         self.db = LocalDB()
-        self.pl = PlaylistManager()
+        self.pm = PlaylistManager()
         self.cm = ConfigManager()
+        self.ss = SteamScraper()
+        self.cmd = SteamCMDManager()
         self.first_start = True
+        self.menudict = menudict.menu_dict
 
         if CONFIG_DATA["first_db_update"]:
             self.db.update_level_table()
-            self.db.update_zeeplist_table()
+            # self.db.update_zeeplist_table()
             self.cm.change("first_db_update", False)
 
     def start(self):
+        # TODO: set a questionary style for the menus
         if self.first_start:
             start_screen = """
             Welcome to ZeeplistCurator. Python script written by Triton (@triton_nl)
-            Your playlist folder is at: {0}
+            The default location for playlists is set to: {0}
+            The default location for workshop items is set to: {1}
+            If this is incorrect, change this in the options menu. Or edit config.json manually.
 
             """.format(
-                ZEEPKIST_APPDATA_FOLDER + "/Playlists"
+                ZEEPKIST_APPDATA_FOLDER + "/Playlists", STEAM_WORKSHOP_FOLDER
             )
             q.print(start_screen)
             self.first_start = False
 
-        # NOTE: Main choices dictionairy
-        # NOTE: 1 = command, 0 = exit
-        menu_dict = {
-            "Create Playlist": {
-                "[local] Name": 1,
-                "[local] Author (fuzzy)": 1,
-                "[local] Author (strict)": 1,
-                "[steam] Search": 1,
-                "[steam] Author ID": 1,
-                "[steam] Workshop ID": 1,
-                "Back": 0,
-            },
-            "Playlist Manager": {
-                # "Combine Playlists": 1,
-                # "Filter/Split Playlists": 1,
-                # "Sort Levels in Playlist": 1,
-                # "Extract from Playlist": 1,  # NOTE: ?
-                # "Delete playlists": 1,
-                "Back": 0,
-            },
-            "Database Manager": {
-                "Refresh Database": 1,
-                "Back": 0,
-            },
-            "Options": {
-                # "Edit config file": 1,
-                "Change Playlist Defaults": 1,
-                "Change Verbose Database Update": 1,
-                "Change Steam Max Page": 1,
-                "Back": 0,
-            },
-            "About": {
-                "about_text": """
-
-                This program is created by Triton (@triton_nl on discord)
-
-        Github page: https://github.com/tritonzk/ZeeplistCurator
-
-        Zeeplist Curator creates a database called 'data.db' where data from your local tracks and playlists is stored.
-        With some clever SQL queries you can easily create new playlists and manipulate your current ones.
-
-        If there are some specific queries you want you can suggest them to me via discord or github
-        and if you have some Python/sqlite3 experience or are willing to learn, I welcome any contributors.
-
-        Steam search will search the workshop and download any missing tracks. This may take a long time if the
-        search finds a lot of results. You can change the max amount of pages (30 items per page) to check in the Option menu.
-        The default is 5.
-
-        You can also simply go to the workshop, download the ones you want, update the database using the [local] method.
-
-        -----------------------FUTURE UPDATE PLANS----------------------------------
-        I am working on a future graphics update with many more features.
-        The graphics update will have a visual track browser with thumbnails for local levels.
-
-        planned functions:
-        - magic queries (combine filters, better queries)
-        - tracking played tracks
-        - playlistmanager (open playlistmanager menu to see planned functions)
-        - rating tracks, adding tags and adding notes
-        - tracking GTR times
-
-        More info in the database will make more interesting queries possible.
-        - flying/offroad/etc. gate exists in level
-        - amount of gtr records
-        - amount of blocks
-        - has custom or certain skybox
-        - has no boosters
-        - etc.
-
-        Mixing and matching these filters will make it possible to create many different playlists.
-        Keep in mind that most info (especially block and level info) can only be found in locally stored levels.
-        First you have to download tracks and update the database.
-
-
-        -------------------------THANKS----------------------------------------
-        Thanks to Thundernerd for creating GTR and Zworpshop and so much more.
-        Thanks to Vei/Vulpesx for creating Zeeper which inspired me to start this project.
-        """
-            },
-            "Exit": 0,
-        }
-
-        # TODO: setup a style for the menus
-        menu_style_curator = q.Style(
-            [
-                ("", ""),
-                ("", ""),
-                ("", ""),
-                ("", ""),
-                ("", ""),
-                ("", ""),
-                ("", ""),
-            ]
-        )
-
         firstmenu = q.select(
-            message="welcome to ZeeplistCurator. ",
-            choices=[name for name, opc in menu_dict.items()],
+            message="Welcome to ZeeplistCurator",
+            choices=[name for name, opc in self.menudict.items()],
             use_shortcuts=True,
             instruction="use j/k, arrow keys or numbers to navigate",
         ).ask()
 
         match firstmenu:
             case "Create Playlist":
-                playlist_choice = q.select(
-                    message="Create a Playlist",
-                    choices=[
-                        name for name, opc in menu_dict["Create Playlist"].items()
-                    ],
-                    use_shortcuts=True,
-                    instruction="use j/k, arrow keys or numbers to navigate",
-                ).ask()
-                match playlist_choice:
-                    case "[local] Name":
-                        name_query = q.text(message="Search by name: ").ask()
-                        formatted_name_search = self.pl.format_playlistdict_from_levels(
-                            self.db.query_data_name(name_query)
-                        )
-
-                        print(
-                            f"found: {formatted_name_search["amountOfLevels"]} tracks"
-                        )
-                        if q.confirm("continue to create playlist? ").ask():
-                            self.pl.create_and_copy_playlist("", formatted_name_search)
-                            q.press_any_key_to_continue().ask()
-                            self.start()
-                        else:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-                    case "[local] Author (fuzzy)":
-                        author_query = q.text(
-                            message="Search by author (fuzzy): "
-                        ).ask()
-                        formatted_fuzzy = self.pl.format_playlistdict_from_levels(
-                            self.db.query_data_author_fuzzy(author_query)
-                        )
-
-                        q.print(
-                            "found: {0} tracks".format(
-                                formatted_fuzzy["amountOfLevels"]
-                            )
-                        )
-                        if q.confirm("continue to create playlist? ").ask():
-                            self.pl.create_and_copy_playlist("", formatted_fuzzy)
-                            q.press_any_key_to_continue().ask()
-                            self.start()
-                        else:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-                    case "[local] Author (strict)":
-                        author_query = q.text(
-                            message="Search by author (strict): "
-                        ).ask()
-                        author_search = self.db.query_data_author(author_query)
-                        formatted_author = self.pl.format_playlistdict_from_levels(
-                            author_search
-                        )
-                        print(f"found: {formatted_author["amountOfLevels"]} tracks")
-                        confirm_create = q.confirm(
-                            "continue to create playlist? "
-                        ).ask()
-                        if confirm_create:
-                            self.pl.create_and_copy_playlist("", formatted_author)
-                            q.press_any_key_to_continue().ask()
-                            self.start()
-                        else:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-                    case "[steam] Search":
-                        ss = SteamScraper()
-                        cmd = SteamCMDManager(STEAM_WORKSHOP_FOLDER)
-
-                        steam_search_ids = ss.get_workshop_ids_from_browse_page(
-                            ss.steam_link_console()
-                        )
-                        workshop_dl = cmd.dl_workshoplist_to_folder(steam_search_ids)
-                        if workshop_dl == False:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-
-                        self.db.update_level_table()
-
-                        continue_to_create_playlist = q.confirm(
-                            "Tracks downloaded. Create playlist from tracks?"
-                        ).ask()
-                        if continue_to_create_playlist:
-                            formatted_workshop_id = (
-                                self.pl.format_playlistdict_from_levels(
-                                    self.db.query_data_workshopid(steam_search_ids)
-                                )
-                            )
-                            self.pl.create_and_copy_playlist("", formatted_workshop_id)
-                            q.press_any_key_to_continue().ask()
-                            self.start()
-                        else:
-                            self.start()
-                    case "[steam] Author ID":  # TODO: download from author id
-                        ss = SteamScraper()
-                        cmd = SteamCMDManager(STEAM_WORKSHOP_FOLDER)
-                        workshop_download = True
-                        q.print(
-                            "go to an authors workshop page on steam or in a browser. the URL should look like this:"
-                        )
-                        q.print(
-                            "https://steamcommunity.com/id/Triton/myworkshopfiles/",
-                            style="fg:ansiyellow",
-                        )
-                        q.print(
-                            "take the name between /id/ and /myworkshopfiles, Triton in this example, and paste it here"
-                        )
-                        q.print(
-                            "You can use CTRL-SHIFT-V or right click to paste text in a terminal"
-                        )
-                        author = q.text("Enter id: ").ask()
-
-                        author_ids = ss.get_workshop_ids_from_author_id(author)
-                        if author_ids == [0]:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-                        else:
-                            workshop_download = cmd.dl_workshoplist_to_folder(
-                                author_ids
-                            )
-                        if workshop_download == True:
-                            self.db.update_level_table()
-
-                            continue_to_create_playlist = q.confirm(
-                                "Tracks downloaded. Create playlist from tracks?"
-                            ).ask()
-                            if continue_to_create_playlist:
-                                formatted_workshop_id = (
-                                    self.pl.format_playlistdict_from_levels(
-                                        self.db.query_data_workshopid(author_ids)
-                                    )
-                                )
-                                self.pl.create_and_copy_playlist(
-                                    "", formatted_workshop_id
-                                )
-                                q.press_any_key_to_continue().ask()
-                                self.start()
-                            else:
-                                self.start()
-                        else:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-                    case "[steam] Workshop ID":
-                        ss = SteamScraper()
-                        cmd = SteamCMDManager(STEAM_WORKSHOP_FOLDER)
-                        q.print(
-                            "Go to a tracks workshop page in a browser and copy the workshop ID from the URL"
-                        )
-                        q.print("The URL should look like this: ")
-                        q.print(
-                            "https://steamcommunity.com/sharedfiles/filedetails/?id=1111111111"
-                        )
-                        workshop_id = q.text("Enter ID: ").ask()
-                        workshop_dl = cmd.dl_workshoplist_to_folder([workshop_id])
-                        if workshop_dl == True:
-                            self.db.update_level_table()
-
-                            continue_to_create_playlist = q.confirm(
-                                "Tracks downloaded. Create playlist from tracks?"
-                            ).ask()
-                            if continue_to_create_playlist:
-                                formatted_workshop_id = (
-                                    self.pl.format_playlistdict_from_levels(
-                                        self.db.query_data_workshopid(
-                                            [int(workshop_id)]
-                                        )
-                                    )
-                                )
-                                self.pl.create_and_copy_playlist(
-                                    "", formatted_workshop_id
-                                )
-                                q.press_any_key_to_continue().ask()
-                                self.start()
-                            else:
-                                self.start()
-                        else:
-                            q.print("---- quit out of menu ----")
-                            self.start()
-
+                self.create_playlist_menu()
             case "Playlist Manager":
-                q.print(text="This functionality is a WIP. Coming in v0.4.")
-                q.print(
-                    text="""
-                functions: 
-                - combine playlists
-                - filter / split playlists
-                - sort playlists
-                - delete playlists
-                - combine filters
-                - auto updating playlists
-                - set playlist profiles to hide certain ones
-                - collect data about which playlists certain tracks are in
-                - set up genre playlists
-                """
-                )
-                q.press_any_key_to_continue().ask()
-                self.start()
+                self.playlist_manager()
             case "Database Manager":
-                manager_choices = q.select(
-                    message="Database Manager",
-                    choices=[x[0] for x in menu_dict["Database Manager"].items()],
-                    use_shortcuts=True,
-                    instruction="use j/k, arrow keys or numbers to navigate",
-                ).ask()
-                match manager_choices:  # TODO: give some more info on which items where updated
-                    case "Refresh Database":
-                        self.db.update_level_table()
-                        q.print("Level table updated")
-                        self.db.update_zeeplist_table()
-                        q.print("Playlist table updated")
-                        q.press_any_key_to_continue().ask()
-                        self.start()
-                    case "Back":
-                        self.start()
+                self.database_manager()
             case "Options":
-                q.print("-" * 20 + "Current settings" + "-" * 20, style="fg:ansired")
-                pprint(CONFIG_DATA)
-                q.print("-" * 50, style="fg:ansired")
-                options_choices = q.select(
-                    message="Options",
-                    choices=[x[0] for x in menu_dict["Options"].items()],
-                    use_shortcuts=True,
-                    instruction="use j/k, arrow keys or numbers to navigate",
-                ).ask()
-
-                match options_choices:
-                    case "Change Playlist Defaults":
-                        config = ConfigManager()
-                        config.change_playlist_defaults()
-                        q.print(
-                            "Config Changed. Restart program now to finalize changes."
-                        )
-                        if q.confirm("Restart now? ").ask():
-                            sys.exit(0)
-                        else:
-                            self.start()
-                    case "Change Verbose Database Update":
-                        config = ConfigManager()
-                        config.change_update_verbose()
-                        q.print(
-                            "Config Changed. Restart program now to finalize changes."
-                        )
-                        if q.confirm("Restart now? ").ask():
-                            sys.exit(0)
-                        else:
-                            self.start()
-                    case "Change Steam Max Page":
-                        config = ConfigManager()
-                        config.change_steam_max_page()
-                        q.print(
-                            "Config Changed. Restart program now to finalize changes."
-                        )
-                        if q.confirm("Restart now? ").ask():
-                            sys.exit(0)
-                        else:
-                            self.start()
-                    case "Back":
-                        self.start()
+                self.options()
             case "About":
-                q.print(menu_dict["About"]["about_text"])
+                print(self.menudict["About"]["about_text"])
                 q.press_any_key_to_continue().ask()
                 self.start()
             case "Exit":
-                sys.exit(0)
+                exit()
+
+    def create_playlist(self, formatted_tracks):
+        if q.confirm("Create Playlist? ").ask():
+            self.pm.create_and_copy_playlist("", formatted_tracks)
+            q.press_any_key_to_continue().ask()
+            self.start()
+        else:
+            q.print("---- quit out of menu ----")
+            self.start()
+
+    def create_playlist_menu(self):
+        """create playlists."""
+        playlist_choice = q.select(
+            message="Create a Playlist",
+            choices=[name for name, opc in self.menudict["Create Playlist"].items()],
+            use_shortcuts=True,
+            instruction="use j/k, arrow keys or numbers to navigate",
+        ).ask()
+
+        # NOTE: ---------------------CREATE PLAYLISTS ----------------------------
+        match playlist_choice:
+            # NOTE: ---------------- [local] Name -------------------------------
+            case "[local] Name":
+                name_query = q.text(message="Search by name: ").ask()
+                formatted_name = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_name(name_query, self.db.query_sort())
+                )
+
+                self.create_playlist(formatted_name)
+
+            # NOTE: --------- [local] Author(fuzzy) -----------------------------
+            case "[local] Author (fuzzy)":
+                author_query = q.text(message="Search by author (fuzzy): ").ask()
+                formatted_fuzzy = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_author_fuzzy(author_query, self.db.query_sort())
+                )
+
+                self.create_playlist(formatted_fuzzy)
+
+            # NOTE: -------------- [local] Author (strict) -------------------
+            case "[local] Author (strict)":
+                author_query = q.text(message="Search by author (strict): ").ask()
+                formatted_author = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_author(author_query, self.db.query_sort())
+                )
+
+                self.create_playlist(formatted_author)
+
+            # NOTE: ---------------- [steam] Search ----------------------
+            case "[steam] Search":
+                steam_search_ids = self.ss.get_workshop_ids_from_browse_page(
+                    self.ss.steam_link_console()
+                )
+                steamdl = self.cmd.dl_workshoplist_to_folder(steam_search_ids)
+                if steamdl:
+                    self.db.update_level_table()
+
+                formatted_steam_search = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_workshopid(
+                        steam_search_ids, self.db.query_sort()
+                    )
+                )
+
+                self.create_playlist(formatted_steam_search)
+
+            # NOTE: ---------------------- [steam] Author ID -------------
+            case "[steam] Author ID":
+                q.print(
+                    """
+go to an authors workshop page on steam or in a browser. the URL should look like this:
+https://steamcommunity.com/profiles/Triton/myworkshopfiles/
+take the name between /profiles/ and /myworkshopfiles, Triton in this example, and paste it.
+You can use CTRL-SHIFT-V or right click to paste text in a terminal"""
+                )
+                author_id = q.text("enter ID:").ask()
+                author_workshop_ids = self.ss.get_workshop_ids_from_author_id(author_id)
+                steamdl = self.cmd.dl_workshoplist_to_folder(author_workshop_ids)
+                if steamdl:
+                    self.db.update_level_table()
+
+                formatted_steam_author = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_workshopid(
+                        author_workshop_ids, self.db.query_sort()
+                    )
+                )
+
+                self.create_playlist(formatted_steam_author)
+
+            # NOTE: -------------------- [steam] Workshop ID ---------------------------
+            case "[steam] Workshop ID":
+                q.print(
+                    """Go to the workshop page for an item and copy the id in the link. 
+The URL should look like this: https://steamcommunity.com/sharedfiles/filedetails/?id=1111111111
+Paste the numbers after id= below."""
+                )
+                workshop_id = q.text("enter Workshop ID: ").ask()
+                steamdl = self.cmd.dl_workshoplist_to_folder([int(workshop_id)])
+
+                if steamdl:
+                    self.db.update_level_table()
+
+                formatted_steam_workshop_id = self.pm.format_playlistdict_from_levels(
+                    self.db.query_data_workshopid(
+                        [int(workshop_id)], self.db.query_sort()
+                    )
+                )
+
+                self.create_playlist(formatted_steam_workshop_id)
+
+    def playlist_manager(self):
+        q.print(text="This functionality is a WIP. Coming in v0.4.")
+        q.print(
+            text="""
+        functions: 
+        - combine playlists
+        - filter / split playlists
+        - sort playlists
+        - delete playlists
+        - combine filters
+        - auto updating playlists
+        - set playlist profiles to hide certain ones
+        - collect data about which playlists certain tracks are in
+        - set up genre playlists
+        """
+        )
+        q.press_any_key_to_continue().ask()
+        self.start()
+
+    def database_manager(self):
+        manager_choices = q.select(
+            message="Database Manager",
+            choices=[x[0] for x in self.menudict["Database Manager"].items()],
+            use_shortcuts=True,
+            instruction="use j/k, arrow keys or numbers to navigate",
+        ).ask()
+        match manager_choices:  # TODO: give some more info on which items where updated
+            case "Refresh Database":
+                self.db.update_level_table()
+                q.print("Level table updated", style="bold")
+                q.press_any_key_to_continue().ask()
+                self.start()
+            case "Back":
+                self.start()
+
+    def options(self):
+        # TODO: do some testing if this all works. sometimes the playlist defaults do not work.
+        q.print("-" * 20 + "Current settings" + "-" * 20, style="fg:ansired")
+        pprint(CONFIG_DATA)
+        q.print("-" * 50, style="fg:ansired")
+        config = self.cm
+        options_choices = q.select(
+            message="Options",
+            choices=[x[0] for x in self.menudict["Options"].items()],
+            use_shortcuts=True,
+            instruction="use j/k, arrow keys or numbers to navigate",
+        ).ask()
+
+        match options_choices:
+            case "Change Playlist Defaults":
+                config.change_playlist_defaults()
+                q.print("Config Changed. Restart program now to finalize changes.")
+                if q.confirm("Restart now? ").ask():
+                    exit()
+                else:
+                    self.start()
+            case "Change Verbose Database Update":
+                config.change_update_verbose()
+                q.print("Config Changed. Restart program now to finalize changes.")
+                if q.confirm("Restart now? ").ask():
+                    exit()
+                else:
+                    self.start()
+            case "Change Steam Max Page":
+                config.change_steam_max_page()
+                q.print("Config Changed. Restart program now to finalize changes.")
+                if q.confirm("Restart now? ").ask():
+                    exit()
+                else:
+                    self.start()
+            case "Back":
+                self.start()
+            case "About":
+                q.print(self.menudict["About"]["about_text"])
+                q.press_any_key_to_continue().ask()
+                self.start()
 
 
 console = Console()
